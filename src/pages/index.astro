@@ -62,6 +62,11 @@ const servicios = [
     <div class="pointer-events-none absolute right-10 top-24 hidden h-40 w-40 rounded-full bg-sol-500/70 blur-sm lg:block"></div>
     <div class="pointer-events-none absolute -bottom-10 right-1/3 hidden h-24 w-24 rounded-full bg-menta-500/60 lg:block"></div>
 
+    <!-- Fondo con color solo en móvil (en desktop ya lo da la franja diagonal de arriba) -->
+    <div class="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-gradient-to-br from-sol-200/70 via-crema-100 to-cielo-200/50 lg:hidden"></div>
+    <div class="pointer-events-none absolute -right-10 top-6 h-32 w-32 rounded-full bg-brand-500/15 blur-2xl lg:hidden"></div>
+    <div class="pointer-events-none absolute left-4 top-52 h-24 w-24 rounded-full bg-fiesta-500/15 blur-2xl lg:hidden"></div>
+
     <div class="relative mx-auto grid max-w-7xl gap-10 px-5 pb-16 pt-14 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-2 lg:gap-6 lg:pb-28 lg:pt-24">
       <div class="relative z-10 flex flex-col justify-center">
         <SectionKicker text="Tienda de pinturas en Honduras" dot="bg-brand-500" />
@@ -119,10 +124,36 @@ const servicios = [
         </dl>
       </div>
 
-      <div class="relative z-10 flex items-end justify-center gap-4 pt-6 lg:justify-end lg:pr-6">
+      <!-- Latas ilustradas: solo en escritorio, donde acompañan la franja diagonal -->
+      <div class="relative z-10 hidden items-end justify-end gap-4 pt-6 lg:flex lg:pr-6">
         <PaintCan color="bg-sol-500" label="Interior" tilt="left" class="mb-6" />
         <PaintCan color="bg-brand-500" label="Exterior" tilt="none" class="scale-110" />
         <PaintCan color="bg-cielo-500" label="A tu medida" tilt="right" class="mb-10" />
+      </div>
+
+      <!-- Fotos reales de accesorios: solo en móvil, le dan vida al fondo plano -->
+      <div class="relative z-10 flex items-center justify-center gap-3 pt-2 lg:hidden">
+        <div class="-rotate-6 rounded-2xl bg-crema-50 p-2.5 shadow-lg ring-1 ring-tinta-900/5">
+          <img
+            src="https://res.cloudinary.com/jzlwbtwt/image/upload/v1787326629/e37ae1bqk6dpsbzkhejv.png"
+            alt="Felpa para pintar"
+            class="h-20 w-20 object-contain sm:h-24 sm:w-24"
+          />
+        </div>
+        <div class="-translate-y-3 rotate-3 rounded-2xl bg-crema-50 p-2.5 shadow-lg ring-1 ring-tinta-900/5">
+          <img
+            src="https://res.cloudinary.com/jzlwbtwt/image/upload/v1787326630/yfqu6ytp3yfxdjcnbqxs.jpg"
+            alt="Brocha para pintar"
+            class="h-24 w-14 object-contain sm:h-28 sm:w-16"
+          />
+        </div>
+        <div class="rotate-6 rounded-2xl bg-crema-50 p-2.5 shadow-lg ring-1 ring-tinta-900/5">
+          <img
+            src="https://res.cloudinary.com/jzlwbtwt/image/upload/v1787326632/ulci4mz6p84kdu5q6wzw.jpg"
+            alt="Brocha para pintar"
+            class="h-24 w-14 object-contain sm:h-28 sm:w-16"
+          />
+        </div>
       </div>
     </div>
   </section>

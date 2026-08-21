@@ -23,6 +23,46 @@ import CTABand from "../components/CTABand.astro";
     <div id="productos-list" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"></div>
   </section>
 
+  <!-- MATE VS SATINADA -->
+  <section class="bg-crema-200/60 py-16 sm:py-20">
+    <div class="mx-auto max-w-6xl px-5 sm:px-8">
+      <SectionKicker text="Guía rápida" dot="bg-cielo-500" />
+      <h2 class="mt-4 font-display text-3xl font-bold text-tinta-900 sm:text-4xl">
+        ¿Mate o satinada? Cuál conviene más
+      </h2>
+      <p class="mt-4 max-w-2xl text-tinta-600">
+        Las dos se ven bien, pero no rinden igual. Esto es lo que notamos
+        después de años vendiendo ambas:
+      </p>
+
+      <div class="mt-10 grid gap-6 lg:grid-cols-2">
+        <div class="blob-corner border border-tinta-900/5 bg-crema-50 p-7 shadow-sm">
+          <span class="inline-block h-3 w-10 rounded-full bg-tinta-500"></span>
+          <h3 class="mt-4 font-display text-xl font-bold text-tinta-900">Mate</h3>
+          <p class="mt-2 text-sm leading-relaxed text-tinta-500">
+            Acabado sin brillo, disimula mejor las imperfecciones de la pared.
+            Buena opción para techos y para cuartos o salas de poco tránsito,
+            donde no se ensucia ni se golpea tanto.
+          </p>
+        </div>
+
+        <div class="blob-corner-alt relative border-2 border-brand-500 bg-crema-50 p-7 shadow-md">
+          <span class="absolute right-5 top-5 rounded-full bg-brand-500 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-crema-50">
+            Recomendada
+          </span>
+          <span class="inline-block h-3 w-10 rounded-full bg-brand-500"></span>
+          <h3 class="mt-4 font-display text-xl font-bold text-tinta-900">Satinada</h3>
+          <p class="mt-2 text-sm leading-relaxed text-tinta-500">
+            Tiene un poco más de brillo y es mucho más lavable: la suciedad se
+            desliza en vez de pegarse, y aguanta mejor el polvo, el agua y el
+            sol. Por eso la recomendamos para exteriores, cocinas, baños y
+            cualquier zona de mucho uso.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <CTABand
     title="¿No encontraste el color exacto?"
     subtitle="Nuestro servicio de igualación de color existe justo para eso. Trae tu muestra y lo resolvemos en minutos."
