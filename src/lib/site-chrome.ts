@@ -64,9 +64,27 @@ export function enlaceWhatsapp(numero: string, mensaje?: string): string {
   return `https://wa.me/${digitos}${texto}`;
 }
 
+// Convención de atajos de WhatsApp usada en toda la página: cualquier elemento marcado
+// con [data-whatsapp-link] recibe un href real de wa.me, con el mensaje precargado que
+// traiga en [data-whatsapp-mensaje] (si trae alguno). El markup siempre debe traer un
+// href="/contacto" estático de respaldo, por si Firestore o el script fallan.
+// Se exporta para que páginas con contenido armado en su propio <script> (p. ej. las
+// tarjetas de servicios, insertadas después de su propio fetch a Firestore) puedan
+// volver a aplicarla sobre los elementos que insertaron, no solo sobre el HTML estático
+// que ya existía cuando corrió initSiteChrome.
+export function aplicarEnlacesWhatsapp(numero?: string) {
+  if (!numero || !numero.trim()) return;
+  document.querySelectorAll<HTMLAnchorElement>("[data-whatsapp-link]").forEach((el) => {
+    el.href = enlaceWhatsapp(numero, el.dataset.whatsappMensaje);
+    el.target = "_blank";
+    el.rel = "noopener";
+  });
+}
+
 export async function initSiteChrome() {
   const { data: config } = await fetchConfiguracion();
   if (!config) return;
   aplicarMarca(config.nombre, config.logoUrl);
   aplicarFooter(config);
+  aplicarEnlacesWhatsapp(config.whatsapp);
 }

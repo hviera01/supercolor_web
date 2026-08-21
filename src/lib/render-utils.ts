@@ -38,8 +38,16 @@ export function colorPorIndice(i: number): string {
   return COLORES_SOLIDOS[i % COLORES_SOLIDOS.length];
 }
 
-/** Bloque "col-span-full" con el mismo lenguaje visual del sitio, para secciones sin contenido todavía. */
-export function estadoVacioHtml(mensaje = "Estamos actualizando esta sección, vuelve pronto."): string {
+/**
+ * Bloque "col-span-full" con el mismo lenguaje visual del sitio, para secciones sin
+ * contenido todavía. `detalle` reemplaza el texto de apoyo por defecto — úsalo cuando
+ * el vacío es un estado normal y esperado (p. ej. "no hay promociones activas todavía")
+ * y no algo que suene a que el contenido está cargando o a que algo se rompió.
+ */
+export function estadoVacioHtml(
+  mensaje = "Estamos actualizando esta sección, vuelve pronto.",
+  detalle = "Estamos cargando esta sección con contenido nuevo. Mientras tanto, escríbenos y con gusto te ayudamos directamente.",
+): string {
   return `
     <div class="col-span-full flex flex-col items-center gap-3 rounded-3xl border border-dashed border-tinta-900/15 bg-crema-50 px-8 py-16 text-center">
       <span class="grid h-12 w-12 place-items-center rounded-full bg-brand-50 text-brand-500">
@@ -50,7 +58,7 @@ export function estadoVacioHtml(mensaje = "Estamos actualizando esta sección, v
       </span>
       <p class="font-display text-lg font-bold text-tinta-900">${escapeHtml(mensaje)}</p>
       <p class="max-w-sm text-sm leading-relaxed text-tinta-500">
-        Estamos cargando esta sección con contenido nuevo. Mientras tanto, escríbenos y con gusto te ayudamos directamente.
+        ${escapeHtml(detalle)}
       </p>
       <a href="/contacto" class="mt-1 inline-flex items-center gap-1.5 text-sm font-bold text-brand-600 hover:text-brand-700">
         Contáctanos

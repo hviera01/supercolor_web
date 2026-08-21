@@ -63,11 +63,14 @@ const pasos = [
     primaryHref="/ubicacion"
     secondaryLabel="Escríbenos"
     secondaryHref="/contacto"
+    secondaryWhatsapp
+    secondaryWhatsappMensaje="Hola, quiero agendar una igualación de color"
   />
 </BaseLayout>
 
 <script>
-  import { fetchServicios, type Servicio } from "../lib/content";
+  import { fetchConfiguracion, fetchServicios, type Servicio } from "../lib/content";
+  import { aplicarEnlacesWhatsapp } from "../lib/site-chrome";
   import {
     colorPorIndice,
     escapeHtml,
@@ -121,6 +124,8 @@ const pasos = [
       : `<svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
           <path stroke-linecap="round" stroke-linejoin="round" d="${iconoParaTitulo(s.titulo || "")}" />
         </svg>`;
+    const titulo = s.titulo || "Servicio Súper Color";
+    const mensaje = `Hola, quiero saber más sobre "${titulo}"`;
 
     return `
       <article class="blob-corner-alt flex flex-col gap-5 border border-tinta-900/5 bg-crema-50 p-7 shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-xl sm:flex-row sm:items-start">
@@ -128,8 +133,17 @@ const pasos = [
           ${icono}
         </div>
         <div>
-          <h3 class="font-display text-lg font-bold text-tinta-900">${escapeHtml(s.titulo || "Servicio Súper Color")}</h3>
+          <h3 class="font-display text-lg font-bold text-tinta-900">${escapeHtml(titulo)}</h3>
           <p class="mt-2 text-sm leading-relaxed text-tinta-500">${escapeHtml(s.descripcion || "")}</p>
+          <a
+            href="/contacto"
+            data-whatsapp-link
+            data-whatsapp-mensaje="${escapeHtml(mensaje)}"
+            class="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-menta-600 hover:text-menta-700"
+          >
+            Preguntar por WhatsApp
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+          </a>
         </div>
       </article>`;
   }
@@ -147,5 +161,11 @@ const pasos = [
       return;
     }
     contenedor.innerHTML = data.map((s, i) => tarjetaHtml(s, i)).join("");
+
+    // Las tarjetas se insertaron después de que initSiteChrome ya haya podido correr
+    // (o no); se vuelve a aplicar el mismo mecanismo de atajos de WhatsApp sobre todo
+    // el documento para que los botones recién insertados también reciban su enlace real.
+    const { data: config } = await fetchConfiguracion();
+    if (config?.whatsapp) aplicarEnlacesWhatsapp(config.whatsapp);
   })();
 </script>

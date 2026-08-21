@@ -9,13 +9,14 @@ import CTABand from "../components/CTABand.astro";
     <div class="pointer-events-none absolute -left-16 top-0 h-56 w-56 rounded-full bg-mandarina-500/30 blur-3xl"></div>
     <div class="pointer-events-none absolute -right-16 bottom-0 h-64 w-64 rounded-full bg-fiesta-500/25 blur-3xl"></div>
     <div class="relative mx-auto max-w-4xl px-5 py-20 text-center sm:px-8 sm:py-24">
-      <SectionKicker text="Ofertas vigentes" dot="bg-sol-500" light />
+      <SectionKicker text="Promociones" dot="bg-sol-500" light />
       <h1 class="mt-6 font-display text-4xl font-bold text-crema-50 sm:text-5xl">
         Más color por tu dinero
       </h1>
       <p class="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-crema-100/75">
-        Estas son nuestras promociones activas. Se actualizan cada mes, así que
-        vuelve seguido o síguenos en redes sociales para no perderte ninguna.
+        Aquí vamos a ir publicando nuestras ofertas apenas estén disponibles.
+        Por ahora no tenemos promociones activas, así que vuelve pronto o
+        síguenos en redes sociales para enterarte primero.
       </p>
     </div>
   </section>
@@ -90,7 +91,10 @@ import CTABand from "../components/CTABand.astro";
       return;
     }
     if (data.length === 0) {
-      contenedor.innerHTML = estadoVacioHtml("No hay promociones activas en este momento.");
+      contenedor.innerHTML = estadoVacioHtml(
+        "Por ahora no tenemos promociones activas.",
+        "En esta sección iremos publicando y dando a conocer nuestras ofertas apenas estén disponibles. Mientras tanto, escríbenos si buscas un precio para tu proyecto.",
+      );
       return;
     }
     contenedor.innerHTML = data.map((p, i) => tarjetaHtml(p, i)).join("");

@@ -89,7 +89,19 @@ const canales = [
             <span class={`h-11 w-11 shrink-0 rounded-full ${c.color}`}></span>
             <div>
               <p class="text-xs font-bold uppercase tracking-wide text-tinta-500">{c.label}</p>
-              <p class="font-display text-lg font-bold text-tinta-900" data-canal={c.attr}>{c.value}</p>
+              {c.attr === "whatsapp" ? (
+                <a
+                  href="/contacto"
+                  data-whatsapp-link
+                  data-whatsapp-mensaje="Hola, quiero más información sobre pinturas y colores"
+                  data-canal={c.attr}
+                  class="font-display text-lg font-bold text-tinta-900 transition-colors hover:text-menta-600"
+                >
+                  {c.value}
+                </a>
+              ) : (
+                <p class="font-display text-lg font-bold text-tinta-900" data-canal={c.attr}>{c.value}</p>
+              )}
             </div>
           </div>
         ))}

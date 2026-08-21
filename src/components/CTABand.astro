@@ -4,17 +4,35 @@ interface Props {
   subtitle: string;
   primaryLabel?: string;
   primaryHref?: string;
+  /** Si es true, el botón primario se convierte en atajo de WhatsApp (site-chrome.ts
+   * le reemplaza el href real); `primaryHref` se conserva como respaldo estático. */
+  primaryWhatsapp?: boolean;
+  primaryWhatsappMensaje?: string;
   secondaryLabel?: string;
   secondaryHref?: string;
+  /** Mismo mecanismo que `primaryWhatsapp`, para el botón secundario. */
+  secondaryWhatsapp?: boolean;
+  secondaryWhatsappMensaje?: string;
 }
 const {
   title,
   subtitle,
   primaryLabel = "Visítanos hoy",
   primaryHref = "/ubicacion",
+  primaryWhatsapp = false,
+  primaryWhatsappMensaje,
   secondaryLabel = "Escríbenos",
   secondaryHref = "/contacto",
+  secondaryWhatsapp = false,
+  secondaryWhatsappMensaje,
 } = Astro.props;
+
+const primaryAttrs = primaryWhatsapp
+  ? { "data-whatsapp-link": true, "data-whatsapp-mensaje": primaryWhatsappMensaje }
+  : {};
+const secondaryAttrs = secondaryWhatsapp
+  ? { "data-whatsapp-link": true, "data-whatsapp-mensaje": secondaryWhatsappMensaje }
+  : {};
 ---
 
 <section class="relative overflow-hidden bg-tinta-900">
@@ -29,12 +47,14 @@ const {
       <div class="mt-8 flex flex-wrap gap-3">
         <a
           href={primaryHref}
+          {...primaryAttrs}
           class="rounded-full bg-brand-500 px-6 py-3.5 text-sm font-bold text-crema-50 shadow-lg shadow-brand-500/30 transition-transform hover:-translate-y-0.5 hover:bg-brand-400"
         >
           {primaryLabel}
         </a>
         <a
           href={secondaryHref}
+          {...secondaryAttrs}
           class="rounded-full border-2 border-crema-50/30 px-6 py-3.5 text-sm font-bold text-crema-50 transition-colors hover:border-crema-50 hover:bg-crema-50/10"
         >
           {secondaryLabel}

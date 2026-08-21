@@ -4,7 +4,6 @@ import SectionKicker from "../components/SectionKicker.astro";
 import PaintCan from "../components/PaintCan.astro";
 import ProductCard from "../components/ProductCard.astro";
 import ServiceCard from "../components/ServiceCard.astro";
-import PromoCard from "../components/PromoCard.astro";
 import CTABand from "../components/CTABand.astro";
 
 const categorias = [
@@ -167,43 +166,6 @@ const servicios = [
     </div>
   </section>
 
-  <!-- PROMO TEASER -->
-  <section class="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20">
-    <SectionKicker text="Promoción activa" dot="bg-fiesta-500" />
-    <h2 class="mt-4 font-display text-3xl font-bold text-tinta-900 sm:text-4xl">
-      Ofertas del mes
-    </h2>
-    <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      <PromoCard
-        badge="Temporada"
-        title="20% en pinturas látex"
-        description="Aplica en toda la línea de pinturas látex acrílica para interiores, en tienda."
-        detail="Válido durante agosto"
-        gradient="bg-gradient-to-br from-menta-400 to-menta-600"
-        tilt="left"
-      />
-      <PromoCard
-        badge="Combo"
-        title="Igualación + galón gratis"
-        description="Al igualar un color nuevo a mano, tu primer galón en base de agua sale sin costo."
-        detail="Solo en tienda"
-        gradient="bg-gradient-to-br from-brand-400 to-brand-600"
-      />
-      <PromoCard
-        badge="Fidelidad"
-        title="5ta lata con descuento"
-        description="Acumula compras en tu cuenta de cliente frecuente y la quinta lata tiene 30% off."
-        detail="Pregunta en caja"
-        gradient="bg-gradient-to-br from-cielo-400 to-cielo-600"
-        tilt="right"
-      />
-    </div>
-    <a href="/promociones" class="mt-8 inline-flex items-center gap-1.5 text-sm font-bold text-brand-600 hover:text-brand-700">
-      Ver todas las promociones
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-    </a>
-  </section>
-
   <CTABand
     title="Trae tu muestra, nosotros ponemos el color."
     subtitle="Ya sea una tela, una foto o un pedazo de pared, nuestro equipo lo iguala a mano hasta que quede exacto. También puedes enviarnos una foto para cotizar sin visitarnos."
@@ -211,6 +173,8 @@ const servicios = [
     primaryHref="/ubicacion"
     secondaryLabel="Escríbenos por WhatsApp"
     secondaryHref="/contacto"
+    secondaryWhatsapp
+    secondaryWhatsappMensaje="Hola, quiero información sobre proyectos de pintura"
   />
 </BaseLayout>
 

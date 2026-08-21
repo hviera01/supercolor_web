@@ -20,7 +20,7 @@ import CTABand from "../components/CTABand.astro";
   </section>
 
   <section class="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
-    <div id="sucursales-list" class="mx-auto grid max-w-xl gap-6"></div>
+    <div id="sucursales-list" class="mx-auto grid max-w-5xl gap-8"></div>
   </section>
 
   <CTABand
@@ -30,6 +30,8 @@ import CTABand from "../components/CTABand.astro";
     primaryHref="/productos"
     secondaryLabel="Escríbenos"
     secondaryHref="/contacto"
+    secondaryWhatsapp
+    secondaryWhatsappMensaje="Hola, quiero enviarles una foto de mi proyecto para que me ayuden a distancia"
   />
 </BaseLayout>
 
@@ -47,14 +49,16 @@ import CTABand from "../components/CTABand.astro";
   const contenedor = document.getElementById("sucursales-list");
 
   function pinSvg(): string {
-    return `<svg xmlns="http://www.w3.org/2000/svg" class="relative h-14 w-14 text-crema-50 drop-shadow" fill="currentColor" viewBox="0 0 24 24">
+    return `<svg xmlns="http://www.w3.org/2000/svg" class="relative h-20 w-20 text-crema-50 drop-shadow" fill="currentColor" viewBox="0 0 24 24">
       <path d="M12 2C7.6 2 4 5.6 4 10c0 6 8 12 8 12s8-6 8-12c0-4.4-3.6-8-8-8Zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z" />
     </svg>`;
   }
 
+  // Diseñado como un panel único y grande a propósito: hay una sola tienda, así que
+  // esta tarjeta no necesita comportarse como un ítem más de una grilla de sucursales.
   function tarjetaHtml(s: Sucursal, indice: number): string {
     const gradient = degradadoPorIndice(indice);
-    const nombre = s.nombre || "Sucursal Súper Color";
+    const nombre = s.nombre || "Súper Color";
     const cabecera = s.fotoUrl
       ? `<img src="${escapeHtml(s.fotoUrl)}" alt="${escapeHtml(nombre)}" class="absolute inset-0 h-full w-full object-cover" />`
       : `<svg class="absolute inset-0 h-full w-full opacity-20" xmlns="http://www.w3.org/2000/svg">
@@ -65,30 +69,50 @@ import CTABand from "../components/CTABand.astro";
         </svg>
         ${pinSvg()}`;
 
-    const enlace = s.mapaUrl
-      ? `<a href="${escapeHtml(s.mapaUrl)}" target="_blank" rel="noopener" class="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-brand-600 hover:text-brand-700">Cómo llegar ${flechaSvg()}</a>`
-      : `<a href="/contacto" class="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-brand-600 hover:text-brand-700">Cómo llegar ${flechaSvg()}</a>`;
+    const mapaHref = s.mapaUrl ? escapeHtml(s.mapaUrl) : "/contacto";
+    const mapaAttrs = s.mapaUrl ? `target="_blank" rel="noopener"` : "";
 
     return `
-      <article class="overflow-hidden rounded-3xl border border-tinta-900/5 bg-crema-50 shadow-sm">
-        <div class="relative flex h-44 items-center justify-center overflow-hidden ${gradient}">
+      <article class="overflow-hidden rounded-[2.5rem] border border-tinta-900/5 bg-crema-50 shadow-xl lg:grid lg:grid-cols-2">
+        <a href="${mapaHref}" ${mapaAttrs} class="group relative flex h-72 items-center justify-center overflow-hidden ${gradient} lg:h-full lg:min-h-[420px]">
           ${cabecera}
-        </div>
-        <div class="p-7">
-          <h3 class="font-display text-xl font-bold text-tinta-900">${escapeHtml(nombre)}</h3>
-          <ul class="mt-4 space-y-2.5 text-sm text-tinta-700">
-            <li class="flex gap-2.5"><span class="font-bold text-brand-500">Dirección</span> ${escapeHtml(s.direccion || "—")}</li>
-            <li class="flex gap-2.5"><span class="font-bold text-brand-500">Teléfono</span> ${escapeHtml(s.telefono || "—")}</li>
-            <li class="flex gap-2.5"><span class="font-bold text-brand-500">Horario</span> ${escapeHtml(s.horario || "—")}</li>
-          </ul>
-          ${enlace}
+          <span class="absolute inset-0 bg-tinta-900/0 transition-colors group-hover:bg-tinta-900/25"></span>
+          <span class="absolute bottom-6 inline-flex items-center gap-2 rounded-full bg-crema-50 px-5 py-3 text-sm font-bold text-tinta-900 shadow-lg transition-transform group-hover:-translate-y-0.5">
+            Ver en Google Maps ${flechaSvg()}
+          </span>
+        </a>
+        <div class="flex flex-col justify-center p-8 sm:p-12">
+          <span class="inline-flex w-fit items-center gap-2 rounded-full bg-brand-50 px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-600">
+            Nuestra tienda
+          </span>
+          <h2 class="mt-5 font-display text-3xl font-bold text-tinta-900 sm:text-4xl">${escapeHtml(nombre)}</h2>
+          <dl class="mt-8 space-y-6">
+            <div>
+              <dt class="text-xs font-bold uppercase tracking-wide text-brand-500">Dirección</dt>
+              <dd class="mt-1.5 text-lg font-semibold leading-snug text-tinta-900">${escapeHtml(s.direccion || "—")}</dd>
+            </div>
+            <div>
+              <dt class="text-xs font-bold uppercase tracking-wide text-brand-500">Teléfono</dt>
+              <dd class="mt-1.5 text-lg font-semibold text-tinta-900">${escapeHtml(s.telefono || "—")}</dd>
+            </div>
+            <div>
+              <dt class="text-xs font-bold uppercase tracking-wide text-brand-500">Horario</dt>
+              <dd class="mt-1.5 text-lg font-semibold text-tinta-900">${escapeHtml(s.horario || "—")}</dd>
+            </div>
+          </dl>
+          <a
+            href="${mapaHref}" ${mapaAttrs}
+            class="mt-10 inline-flex w-fit items-center gap-2 rounded-full bg-brand-500 px-8 py-4 text-base font-bold text-crema-50 shadow-lg shadow-brand-500/30 transition-transform hover:-translate-y-0.5 hover:bg-brand-600"
+          >
+            Cómo llegar ${flechaSvg()}
+          </a>
         </div>
       </article>`;
   }
 
   (async () => {
     if (!contenedor) return;
-    contenedor.innerHTML = esqueletoTarjetas(2, "h-72");
+    contenedor.innerHTML = esqueletoTarjetas(1, "h-[420px]");
     const { data, error } = await fetchSucursales();
     if (error) {
       contenedor.innerHTML = estadoErrorHtml();
