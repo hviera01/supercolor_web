@@ -25,6 +25,7 @@ function aplicarFooter(datos: {
   facebookUrl?: string;
   instagramUrl?: string;
   whatsapp?: string;
+  horarioAtencion?: string;
 }) {
   const setTexto = (selector: string, valor?: string) => {
     if (!valor || !valor.trim()) return;
@@ -35,6 +36,7 @@ function aplicarFooter(datos: {
   setTexto("[data-footer-direccion]", datos.direccionPrincipal);
   setTexto("[data-footer-telefono]", datos.telefono);
   setTexto("[data-footer-correo]", datos.correo);
+  setTexto("[data-footer-horario]", datos.horarioAtencion);
 
   const setEnlace = (attr: string, url?: string) => {
     if (!url || !url.trim()) return;
@@ -49,9 +51,17 @@ function aplicarFooter(datos: {
   setEnlace("facebook", datos.facebookUrl);
   setEnlace("instagram", datos.instagramUrl);
   if (datos.whatsapp && datos.whatsapp.trim()) {
-    const digitos = datos.whatsapp.replace(/[^\d]/g, "");
-    if (digitos) setEnlace("whatsapp", `https://wa.me/${digitos}`);
+    setEnlace("whatsapp", enlaceWhatsapp(datos.whatsapp));
   }
+}
+
+// Honduras: números locales tienen 8 dígitos y necesitan el código de país
+// 504 para que wa.me abra el chat correctamente.
+export function enlaceWhatsapp(numero: string, mensaje?: string): string {
+  let digitos = numero.replace(/[^\d]/g, "");
+  if (digitos.length === 8) digitos = `504${digitos}`;
+  const texto = mensaje ? `?text=${encodeURIComponent(mensaje)}` : "";
+  return `https://wa.me/${digitos}${texto}`;
 }
 
 export async function initSiteChrome() {
