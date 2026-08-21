@@ -1,0 +1,9 @@
+{
+  "hosting": {
+    "site": "supercolor-web",
+    "public": "dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "cleanUrls": true,
+    "trailingSlash": false
+  }
+}
