@@ -5,18 +5,18 @@ import CTABand from "../components/CTABand.astro";
 
 const valores = [
   {
-    title: "Precisión de color",
-    description: "Cada mezcla se revisa contra la muestra original antes de entregarla.",
+    title: "Familia",
+    description: "Somos un negocio familiar, y así tratamos a cada cliente que entra por la puerta.",
     color: "bg-brand-500",
   },
   {
-    title: "Asesoría honesta",
-    description: "Te decimos qué producto rinde más para tu proyecto, no el más caro.",
+    title: "Honestidad",
+    description: "Te decimos qué producto conviene para tu proyecto, no el más caro.",
     color: "bg-cielo-500",
   },
   {
-    title: "Rapidez",
-    description: "La mayoría de igualaciones están listas en menos de 20 minutos.",
+    title: "Compromiso",
+    description: "No entregamos un color hasta que quede exactamente como lo buscabas.",
     color: "bg-menta-500",
   },
   {
@@ -26,6 +26,28 @@ const valores = [
   },
 ];
 
+const habilidades = [
+  {
+    title: "Preparación de color a mano",
+    description: "Igualamos cualquier muestra o foto, ajustando la mezcla hasta que el tono sea exacto.",
+    color: "bg-brand-500",
+  },
+  {
+    title: "Rapidez",
+    description: "Colores listos hasta en 15 minutos.",
+    color: "bg-menta-500",
+  },
+  {
+    title: "Proyectos de pintura completos",
+    description: "Nuestro equipo de pintores se encarga de todo, de principio a fin.",
+    color: "bg-mandarina-500",
+  },
+  {
+    title: "Asesoría técnica",
+    description: "Te orientamos sobre qué línea y acabado conviene para cada superficie.",
+    color: "bg-cielo-500",
+  },
+];
 ---
 
 <BaseLayout title="Nosotros" description="Conoce la historia, los valores y el equipo detrás de Súper Color.">
@@ -97,6 +119,22 @@ const valores = [
           </div>
         ))}
       </div>
+    </div>
+  </section>
+
+  <!-- HABILIDADES -->
+  <section class="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20">
+    <SectionKicker text="Lo que sabemos hacer" dot="bg-cielo-500" />
+    <h2 class="mt-4 font-display text-3xl font-bold text-tinta-900 sm:text-4xl">Nuestras habilidades</h2>
+
+    <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {habilidades.map((h) => (
+        <div class="blob-corner-alt border border-tinta-900/5 bg-crema-50 p-6 shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-lg">
+          <span class={`inline-block h-3 w-10 rounded-full ${h.color}`}></span>
+          <h3 class="mt-4 font-display text-lg font-bold text-tinta-900">{h.title}</h3>
+          <p class="mt-2 text-sm leading-relaxed text-tinta-500">{h.description}</p>
+        </div>
+      ))}
     </div>
   </section>
 
