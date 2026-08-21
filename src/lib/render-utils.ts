@@ -93,3 +93,33 @@ export function esqueletoTarjetas(cantidad: number, altoClase = "h-72"): string 
 export function flechaSvg(): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>`;
 }
+
+/**
+ * Lata de pintura ilustrada en CSS puro — usada como respaldo para productos que
+ * todavía no tienen foto real. `size: "lg"` es la versión ampliada para el modal
+ * de detalle; `hover: false` quita las clases de transform atadas a un `.group`
+ * (el modal no vive dentro de una tarjeta con hover).
+ */
+export function paintCanHtml(color: string, opts: { size?: "sm" | "lg"; hover?: boolean } = {}): string {
+  const { size = "sm", hover = true } = opts;
+  const d =
+    size === "lg"
+      ? { wrap: "w-44", cap: "h-6 w-[138px]", neck: "h-3 w-36", body: "h-44 w-36", dot: "h-5 w-5" }
+      : { wrap: "w-28", cap: "h-4 w-[88px]", neck: "h-2 w-24", body: "h-28 w-24", dot: "h-3 w-3" };
+  const posicion = hover
+    ? "translate-y-6 transition-transform group-hover:-translate-y-1 group-hover:rotate-3"
+    : "translate-y-0";
+
+  return `
+    <div class="relative ${d.wrap} shrink-0 ${posicion}">
+      <div class="mx-auto ${d.cap} rounded-t-md rounded-b-sm bg-tinta-700"></div>
+      <div class="mx-auto -mt-0.5 ${d.neck} rounded-sm bg-tinta-900/80"></div>
+      <div class="relative mx-auto ${d.body} overflow-hidden rounded-b-2xl border border-tinta-900/10 bg-crema-50 shadow-[0_10px_20px_-8px_rgba(26,26,26,0.35)]">
+        <div class="absolute inset-x-0 top-1/3 h-[38%] ${color}"></div>
+        <div class="absolute inset-x-0 top-1/3 h-px bg-tinta-900/10"></div>
+        <div class="absolute inset-x-0 top-[calc(1/3*100%+38%)] h-px bg-tinta-900/10"></div>
+        <div class="absolute right-2 top-2 h-8 w-3 rounded-full bg-white/40 blur-[1px]"></div>
+      </div>
+      <div class="mx-auto -mt-1 ${d.dot} rounded-full ${color} opacity-80"></div>
+    </div>`;
+}

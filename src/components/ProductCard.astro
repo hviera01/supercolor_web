@@ -3,26 +3,46 @@ interface Props {
   name: string;
   description: string;
   color: string; // clase Tailwind de fondo para la lata, ej. "bg-brand-500"
-  gradient: string; // clases Tailwind de gradiente para el bloque superior
+  gradient: string; // clases Tailwind de gradiente para el bloque superior (solo se usa sin foto)
   tag?: string;
+  image?: string; // foto real del producto (Cloudinary); si viene, reemplaza la lata ilustrada
 }
-const { name, description, color, gradient, tag } = Astro.props;
+const { name, description, color, gradient, tag, image } = Astro.props;
 import PaintCan from "./PaintCan.astro";
+
+// Con foto real la tarjeta es clickeable (abre el modal de detalle desde el script
+// de la página que la incluye); sin foto se queda como antes, un <article> estático.
+const Wrapper = image ? "button" : "article";
 ---
 
-<article class="group blob-corner overflow-hidden border border-tinta-900/5 bg-crema-50 shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-xl">
-  <div class={`relative flex h-40 items-end justify-center overflow-hidden ${gradient} pt-6`}>
-    <div class="absolute -left-6 -top-6 h-24 w-24 rounded-full bg-white/10"></div>
-    <div class="absolute -right-4 top-8 h-14 w-14 rounded-full bg-white/10"></div>
+<Wrapper
+  type={image ? "button" : undefined}
+  data-producto-card={image ? "" : undefined}
+  data-nombre={image ? name : undefined}
+  data-descripcion={image ? description : undefined}
+  data-imagen={image ? image : undefined}
+  class={`group blob-corner block w-full overflow-hidden border border-tinta-900/5 bg-crema-50 text-left shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-xl ${image ? "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500" : ""}`}
+>
+  <div class={`relative flex h-40 items-center justify-center overflow-hidden ${image ? "bg-crema-100 p-6" : `${gradient} items-end justify-center pt-6`}`}>
+    {!image && (
+      <>
+        <div class="absolute -left-6 -top-6 h-24 w-24 rounded-full bg-white/10"></div>
+        <div class="absolute -right-4 top-8 h-14 w-14 rounded-full bg-white/10"></div>
+      </>
+    )}
+    {image ? (
+      <img src={image} alt={name} class="max-h-full max-w-full object-contain" />
+    ) : (
+      <PaintCan color={color} class="translate-y-6 transition-transform group-hover:-translate-y-1 group-hover:rotate-3" />
+    )}
     {tag && (
-      <span class="absolute left-4 top-4 rounded-full bg-crema-50/95 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-tinta-900">
+      <span class="absolute right-3 top-3 z-10 rounded-full bg-crema-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-tinta-900 shadow-md">
         {tag}
       </span>
     )}
-    <PaintCan color={color} class="translate-y-6 transition-transform group-hover:-translate-y-1 group-hover:rotate-3" />
   </div>
   <div class="p-6">
     <h3 class="font-display text-xl font-bold text-tinta-900">{name}</h3>
     <p class="mt-2 text-sm leading-relaxed text-tinta-500">{description}</p>
   </div>
-</article>
+</Wrapper>

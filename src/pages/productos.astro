@@ -35,6 +35,7 @@ import CTABand from "../components/CTABand.astro";
 
 <script>
   import { fetchProductosDestacados, type ProductoDestacado } from "../lib/content";
+  import { abrirModalProducto } from "../lib/product-modal";
   import {
     colorPorIndice,
     degradadoPorIndice,
@@ -42,49 +43,75 @@ import CTABand from "../components/CTABand.astro";
     esqueletoTarjetas,
     estadoErrorHtml,
     estadoVacioHtml,
+    paintCanHtml,
   } from "../lib/render-utils";
 
   const contenedor = document.getElementById("productos-list");
-
-  function paintCanHtml(color: string): string {
-    return `
-      <div class="relative w-28 shrink-0 translate-y-6 transition-transform group-hover:-translate-y-1 group-hover:rotate-3">
-        <div class="mx-auto h-4 w-[88px] rounded-t-md rounded-b-sm bg-tinta-700"></div>
-        <div class="mx-auto -mt-0.5 h-2 w-24 rounded-sm bg-tinta-900/80"></div>
-        <div class="relative mx-auto h-28 w-24 overflow-hidden rounded-b-2xl border border-tinta-900/10 bg-crema-50 shadow-[0_10px_20px_-8px_rgba(26,26,26,0.35)]">
-          <div class="absolute inset-x-0 top-1/3 h-[38%] ${color}"></div>
-          <div class="absolute inset-x-0 top-1/3 h-px bg-tinta-900/10"></div>
-          <div class="absolute inset-x-0 top-[calc(1/3*100%+38%)] h-px bg-tinta-900/10"></div>
-          <div class="absolute right-2 top-2 h-8 w-3 rounded-full bg-white/40 blur-[1px]"></div>
-        </div>
-        <div class="mx-auto -mt-1 h-3 w-3 rounded-full ${color} opacity-80"></div>
-      </div>`;
-  }
+  // Se guarda la última lista cargada para poder recuperar el producto completo
+  // (incluida su disponibilidad) al hacer click en una tarjeta.
+  let productosCargados: ProductoDestacado[] = [];
 
   function tarjetaHtml(p: ProductoDestacado, indice: number): string {
-    const gradient = degradadoPorIndice(indice);
+    const tieneFoto = Boolean(p.imagenUrl);
     const nombre = p.nombre || "Producto Súper Color";
+
+    // La insignia de categoría se pinta DESPUÉS de la foto en el DOM (y con z-10)
+    // para que siempre quede encima de la imagen del producto, nunca tapada por ella.
     const etiqueta = p.categoria
-      ? `<span class="absolute left-4 top-4 rounded-full bg-crema-50/95 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-tinta-900">${escapeHtml(p.categoria)}</span>`
+      ? `<span class="absolute right-3 top-3 z-10 rounded-full bg-crema-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-tinta-900 shadow-md">${escapeHtml(p.categoria)}</span>`
       : "";
-    const cabecera = p.imagenUrl
-      ? `<img src="${escapeHtml(p.imagenUrl)}" alt="${escapeHtml(nombre)}" class="absolute inset-0 h-full w-full object-cover" />`
+
+    const disponibilidad = p.disponibilidad
+      ? `<p class="mt-3 rounded-xl bg-menta-300/15 px-3 py-2 text-xs font-semibold leading-relaxed text-menta-700">${escapeHtml(p.disponibilidad)}</p>`
+      : "";
+
+    // Fondo blanco/crema limpio para fotos reales (los botes ya traen su propio color
+    // de etiqueta); el degradado de marca se reserva para la lata ilustrada de respaldo.
+    const cabecera = tieneFoto
+      ? `<img src="${escapeHtml(p.imagenUrl!)}" alt="${escapeHtml(nombre)}" class="max-h-full max-w-full object-contain" />`
       : `<div class="absolute -left-6 -top-6 h-24 w-24 rounded-full bg-white/10"></div>
          <div class="absolute -right-4 top-8 h-14 w-14 rounded-full bg-white/10"></div>
          ${paintCanHtml(colorPorIndice(indice))}`;
 
+    const clasesCabecera = tieneFoto
+      ? "relative flex h-40 items-center justify-center overflow-hidden bg-crema-100 p-6"
+      : `relative flex h-40 items-end justify-center overflow-hidden ${degradadoPorIndice(indice)} pt-6`;
+
     return `
-      <article class="group blob-corner overflow-hidden border border-tinta-900/5 bg-crema-50 shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-xl">
-        <div class="relative flex h-40 items-end justify-center overflow-hidden ${gradient} pt-6">
-          ${etiqueta}
+      <button
+        type="button"
+        data-indice="${indice}"
+        class="group blob-corner block w-full overflow-hidden border border-tinta-900/5 bg-crema-50 text-left shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+      >
+        <div class="${clasesCabecera}">
           ${cabecera}
+          ${etiqueta}
         </div>
         <div class="p-6">
           <h3 class="font-display text-xl font-bold text-tinta-900">${escapeHtml(nombre)}</h3>
           <p class="mt-2 text-sm leading-relaxed text-tinta-500">${escapeHtml(p.descripcion || "")}</p>
+          ${disponibilidad}
         </div>
-      </article>`;
+      </button>`;
   }
+
+  contenedor?.addEventListener("click", (e) => {
+    const boton = (e.target as HTMLElement).closest("button[data-indice]") as HTMLButtonElement | null;
+    if (!boton || !contenedor.contains(boton)) return;
+    const producto = productosCargados[Number(boton.dataset.indice)];
+    if (!producto) return;
+    abrirModalProducto(
+      {
+        nombre: producto.nombre || "Producto Súper Color",
+        descripcion: producto.descripcion,
+        categoria: producto.categoria,
+        disponibilidad: producto.disponibilidad,
+        imagenUrl: producto.imagenUrl,
+        indiceColor: Number(boton.dataset.indice),
+      },
+      boton,
+    );
+  });
 
   (async () => {
     if (!contenedor) return;
@@ -98,6 +125,7 @@ import CTABand from "../components/CTABand.astro";
       contenedor.innerHTML = estadoVacioHtml("Pronto vas a ver aquí nuestro catálogo destacado.");
       return;
     }
+    productosCargados = data;
     contenedor.innerHTML = data.map((p, i) => tarjetaHtml(p, i)).join("");
   })();
 </script>

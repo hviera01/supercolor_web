@@ -14,20 +14,24 @@ const categorias = [
     color: "bg-brand-500",
     gradient: "bg-gradient-to-br from-brand-500 to-brand-700",
     tag: "Más vendida",
+    image: "https://res.cloudinary.com/jzlwbtwt/image/upload/v1787300676/weexwqpmqdtgk5jrvp7f.png",
   },
   {
     name: "Aceite",
     description: "Acabado resistente y brillante para madera y metal, interior o exterior.",
     color: "bg-cielo-500",
     gradient: "bg-gradient-to-br from-cielo-400 to-cielo-600",
+    image: "https://res.cloudinary.com/jzlwbtwt/image/upload/v1787300675/e2b8hfzhuoc67aeer2mk.png",
   },
   {
     name: "Anticorrosivos",
     description: "Protección duradera contra el óxido y el desgaste diario en superficies metálicas.",
     color: "bg-menta-500",
     gradient: "bg-gradient-to-br from-menta-400 to-menta-600",
+    image: "https://res.cloudinary.com/jzlwbtwt/image/upload/v1787300653/rjg40t8anghv57skvqes.png",
   },
   {
+    // Servicio, no producto físico: sin foto, se queda con la ilustración/degradado.
     name: "Colores a la medida",
     description: "Igualamos a mano cualquier muestra: tela, foto o pared, hasta que el tono quede exacto.",
     color: "bg-fiesta-500",
@@ -138,7 +142,7 @@ const servicios = [
       </a>
     </div>
 
-    <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <div id="categorias-list" class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
       {categorias.map((cat) => <ProductCard {...cat} />)}
     </div>
   </section>
@@ -212,6 +216,7 @@ const servicios = [
 
 <script>
   import { fetchConfiguracion } from "../lib/content";
+  import { abrirModalProducto } from "../lib/product-modal";
 
   (async () => {
     const { data: config } = await fetchConfiguracion();
@@ -235,4 +240,20 @@ const servicios = [
       if (elDescripcion) elDescripcion.textContent = config.descripcion.trim();
     }
   })();
+
+  // Las tarjetas de categoría con foto real (ProductCard con `image`) se renderizan
+  // como <button data-producto-card>; la de "Colores a la medida" (servicio, sin foto)
+  // se queda como <article> estático y no entra en esta delegación.
+  document.getElementById("categorias-list")?.addEventListener("click", (e) => {
+    const tarjeta = (e.target as HTMLElement).closest("[data-producto-card]") as HTMLElement | null;
+    if (!tarjeta) return;
+    abrirModalProducto(
+      {
+        nombre: tarjeta.dataset.nombre || "Producto Súper Color",
+        descripcion: tarjeta.dataset.descripcion,
+        imagenUrl: tarjeta.dataset.imagen,
+      },
+      tarjeta,
+    );
+  });
 </script>

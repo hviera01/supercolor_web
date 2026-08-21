@@ -38,6 +38,8 @@ export interface ProductoDestacado {
   descripcion?: string;
   categoria?: string;
   imagenUrl?: string;
+  /** Texto libre y opcional: en qué presentaciones/colores está disponible. Ausente en la mayoría de documentos. */
+  disponibilidad?: string;
   orden?: number;
   activo?: boolean;
 }
