@@ -1,0 +1,202 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SectionKicker from "../components/SectionKicker.astro";
+import PaintCan from "../components/PaintCan.astro";
+import ProductCard from "../components/ProductCard.astro";
+import ServiceCard from "../components/ServiceCard.astro";
+import PromoCard from "../components/PromoCard.astro";
+import CTABand from "../components/CTABand.astro";
+
+const categorias = [
+  {
+    name: "Pinturas de aceite",
+    description: "Acabado resistente y brillante para madera y metal, interior o exterior.",
+    color: "bg-brand-500",
+    gradient: "bg-gradient-to-br from-brand-500 to-brand-700",
+    tag: "Más vendida",
+  },
+  {
+    name: "Esmaltes",
+    description: "Protección duradera contra el óxido y el desgaste diario en superficies metálicas.",
+    color: "bg-cielo-500",
+    gradient: "bg-gradient-to-br from-cielo-400 to-cielo-600",
+  },
+  {
+    name: "Pinturas de agua",
+    description: "Bajo olor y secado rápido, ideal para paredes interiores de casa y oficina.",
+    color: "bg-menta-500",
+    gradient: "bg-gradient-to-br from-menta-400 to-menta-600",
+  },
+  {
+    name: "Colores personalizados",
+    description: "Igualamos cualquier muestra: tela, foto o pared, con nuestro sistema de mezcla.",
+    color: "bg-fiesta-500",
+    gradient: "bg-gradient-to-br from-fiesta-400 to-fiesta-600",
+    tag: "A tu medida",
+  },
+];
+
+const servicios = [
+  {
+    title: "Igualación de color",
+    description: "Trae una muestra y la igualamos con precisión usando nuestro sistema de mezcla.",
+    color: "bg-brand-500",
+    icon: "swatch" as const,
+  },
+  {
+    title: "Mezcla a medida",
+    description: "Preparamos el tono exacto que necesitas, en la cantidad que necesitas.",
+    color: "bg-mandarina-500",
+    icon: "mix" as const,
+  },
+];
+---
+
+<BaseLayout title="Inicio">
+  <!-- HERO -->
+  <section class="relative overflow-hidden">
+    <div class="absolute inset-y-0 right-0 hidden w-[42%] skew-x-[-8deg] bg-gradient-to-b from-brand-500 to-brand-700 lg:block"></div>
+    <div class="pointer-events-none absolute right-10 top-24 hidden h-40 w-40 rounded-full bg-sol-500/70 blur-sm lg:block"></div>
+    <div class="pointer-events-none absolute -bottom-10 right-1/3 hidden h-24 w-24 rounded-full bg-menta-500/60 lg:block"></div>
+
+    <div class="relative mx-auto grid max-w-7xl gap-10 px-5 pb-16 pt-14 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-2 lg:gap-6 lg:pb-28 lg:pt-24">
+      <div class="relative z-10 flex flex-col justify-center">
+        <SectionKicker text="Tienda de pinturas en Honduras" dot="bg-brand-500" />
+        <h1 class="mt-5 font-display text-4xl font-bold leading-[1.05] text-tinta-900 sm:text-5xl lg:text-6xl">
+          El color exacto
+          <span class="relative inline-block text-brand-500">
+            que imaginaste
+            <svg class="absolute -bottom-2 left-0 w-full text-sol-500" viewBox="0 0 200 12" preserveAspectRatio="none" fill="none">
+              <path d="M2 9c40-8 156-8 196 0" stroke="currentColor" stroke-width="6" stroke-linecap="round" />
+            </svg>
+          </span>
+          , sin adivinar.
+        </h1>
+        <p class="mt-6 max-w-lg text-lg leading-relaxed text-tinta-500">
+          En Súper Color igualamos, mezclamos y asesoramos para que cada lata que
+          te llevas sea exactamente el tono que tenías en mente. Pinturas de
+          aceite, agua, esmaltes y color a medida — todo en un solo lugar.
+        </p>
+        <div class="mt-9 flex flex-wrap gap-3">
+          <a
+            href="/productos"
+            class="rounded-full bg-brand-500 px-7 py-4 text-sm font-bold text-crema-50 shadow-lg shadow-brand-500/30 transition-transform hover:-translate-y-0.5 hover:bg-brand-600"
+          >
+            Ver productos
+          </a>
+          <a
+            href="/servicios"
+            class="rounded-full border-2 border-tinta-900/15 px-7 py-4 text-sm font-bold text-tinta-900 transition-colors hover:border-brand-500 hover:text-brand-600"
+          >
+            Igualar un color
+          </a>
+        </div>
+        <dl class="mt-12 grid max-w-md grid-cols-3 gap-4 border-t border-tinta-900/10 pt-6">
+          <div>
+            <dt class="font-display text-2xl font-bold text-brand-500">+20</dt>
+            <dd class="text-xs font-semibold uppercase tracking-wide text-tinta-500">Años de experiencia</dd>
+          </div>
+          <div>
+            <dt class="font-display text-2xl font-bold text-brand-500">+3,000</dt>
+            <dd class="text-xs font-semibold uppercase tracking-wide text-tinta-500">Tonos igualados</dd>
+          </div>
+          <div>
+            <dt class="font-display text-2xl font-bold text-brand-500">2</dt>
+            <dd class="text-xs font-semibold uppercase tracking-wide text-tinta-500">Sucursales</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="relative z-10 flex items-end justify-center gap-4 pt-6 lg:justify-end lg:pr-6">
+        <PaintCan color="bg-sol-500" label="Sol" tilt="left" class="mb-6" />
+        <PaintCan color="bg-brand-500" label="Súper" tilt="none" class="scale-110" />
+        <PaintCan color="bg-cielo-500" label="Cielo" tilt="right" class="mb-10" />
+      </div>
+    </div>
+  </section>
+
+  <!-- CATEGORIAS -->
+  <section class="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20">
+    <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+      <div>
+        <SectionKicker text="Catálogo" dot="bg-cielo-500" />
+        <h2 class="mt-4 font-display text-3xl font-bold text-tinta-900 sm:text-4xl">
+          Un color para cada superficie
+        </h2>
+      </div>
+      <a href="/productos" class="text-sm font-bold text-brand-600 hover:text-brand-700">
+        Ver catálogo completo →
+      </a>
+    </div>
+
+    <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {categorias.map((cat) => <ProductCard {...cat} />)}
+    </div>
+  </section>
+
+  <!-- SERVICIOS DESTACADOS -->
+  <section class="bg-crema-200/60 py-16 sm:py-20">
+    <div class="mx-auto max-w-7xl px-5 sm:px-8">
+      <SectionKicker text="Servicio a tu medida" dot="bg-mandarina-500" />
+      <h2 class="mt-4 max-w-lg font-display text-3xl font-bold text-tinta-900 sm:text-4xl">
+        ¿No encuentras el tono? Nosotros lo hacemos por ti.
+      </h2>
+      <div class="mt-10 grid gap-6 sm:grid-cols-2">
+        {servicios.map((s) => <ServiceCard {...s} />)}
+      </div>
+      <a
+        href="/servicios"
+        class="mt-8 inline-flex items-center gap-1.5 text-sm font-bold text-brand-600 hover:text-brand-700"
+      >
+        Conoce todos nuestros servicios
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+      </a>
+    </div>
+  </section>
+
+  <!-- PROMO TEASER -->
+  <section class="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20">
+    <SectionKicker text="Promoción activa" dot="bg-fiesta-500" />
+    <h2 class="mt-4 font-display text-3xl font-bold text-tinta-900 sm:text-4xl">
+      Ofertas del mes
+    </h2>
+    <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <PromoCard
+        badge="Temporada"
+        title="20% en pinturas de agua"
+        description="Aplica en toda la línea de pinturas de agua para interiores, en ambas sucursales."
+        detail="Válido durante agosto"
+        gradient="bg-gradient-to-br from-menta-400 to-menta-600"
+        tilt="left"
+      />
+      <PromoCard
+        badge="Combo"
+        title="Igualación + galón gratis"
+        description="Al igualar un color nuevo, tu primer galón en base de agua sale sin costo."
+        detail="Solo en sucursal Tegucigalpa"
+        gradient="bg-gradient-to-br from-brand-400 to-brand-600"
+      />
+      <PromoCard
+        badge="Fidelidad"
+        title="5ta lata con descuento"
+        description="Acumula compras en tu cuenta de cliente frecuente y la quinta lata tiene 30% off."
+        detail="Pregunta en caja"
+        gradient="bg-gradient-to-br from-cielo-400 to-cielo-600"
+        tilt="right"
+      />
+    </div>
+    <a href="/promociones" class="mt-8 inline-flex items-center gap-1.5 text-sm font-bold text-brand-600 hover:text-brand-700">
+      Ver todas las promociones
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+    </a>
+  </section>
+
+  <CTABand
+    title="Trae tu muestra, nosotros ponemos el color."
+    subtitle="Ya sea una tela, una foto o un pedazo de pared, nuestro equipo lo iguala frente a ti en minutos."
+    primaryLabel="Buscar sucursal"
+    primaryHref="/sucursales"
+    secondaryLabel="Escríbenos por WhatsApp"
+    secondaryHref="/contacto"
+  />
+</BaseLayout>

@@ -1,0 +1,97 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SectionKicker from "../components/SectionKicker.astro";
+import ServiceCard from "../components/ServiceCard.astro";
+import CTABand from "../components/CTABand.astro";
+
+const servicios = [
+  {
+    title: "Igualación de color",
+    description: "Trae una muestra —tela, foto, pedazo de pared o un objeto— y la igualamos con precisión usando nuestro sistema de mezcla computarizado.",
+    color: "bg-brand-500",
+    icon: "swatch" as const,
+  },
+  {
+    title: "Mezcla a medida",
+    description: "Preparamos el tono exacto que necesitas, en la cantidad exacta que necesitas: desde un cuarto de galón hasta cubetas industriales.",
+    color: "bg-mandarina-500",
+    icon: "mix" as const,
+  },
+  {
+    title: "Asesoría de color",
+    description: "¿No sabes qué tono elegir? Nuestro equipo te ayuda a combinar colores según el ambiente, la luz natural y el estilo que buscas.",
+    color: "bg-cielo-500",
+    icon: "advice" as const,
+  },
+  {
+    title: "Entrega a domicilio",
+    description: "Hacemos tu pedido y te lo llevamos a la puerta de tu casa o proyecto dentro del área metropolitana, en el mismo día.",
+    color: "bg-menta-500",
+    icon: "truck" as const,
+  },
+];
+
+const pasos = [
+  { n: "1", title: "Trae tu muestra", text: "Una tela, una foto, un pedazo de pared o simplemente cuéntanos la idea." },
+  { n: "2", title: "Escaneamos el color", text: "Nuestro equipo mide el tono exacto con el sistema de igualación." },
+  { n: "3", title: "Mezclamos frente a ti", text: "Preparamos la fórmula y la ajustamos hasta que coincida perfecto." },
+  { n: "4", title: "Te llevas tu color", text: "Listo en minutos, con la fórmula guardada por si necesitas más." },
+];
+---
+
+<BaseLayout title="Servicios" description="Igualación de color, mezcla a medida, asesoría y entrega a domicilio en Súper Color.">
+  <section class="relative overflow-hidden bg-tinta-900">
+    <div class="pointer-events-none absolute -left-20 top-10 h-64 w-64 rounded-full bg-fiesta-500/30 blur-3xl"></div>
+    <div class="pointer-events-none absolute -right-10 bottom-0 h-56 w-56 rounded-full bg-cielo-500/25 blur-3xl"></div>
+    <div class="relative mx-auto max-w-4xl px-5 py-20 text-center sm:px-8 sm:py-24">
+      <SectionKicker text="Lo que hacemos por ti" dot="bg-mandarina-500" light />
+      <h1 class="mt-6 font-display text-4xl font-bold text-crema-50 sm:text-5xl">
+        Servicios pensados para que aciertes con el color
+      </h1>
+      <p class="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-crema-100/75">
+        Más que una tienda de pinturas: somos el equipo que resuelve el "¿qué
+        color era?" de tu próximo proyecto.
+      </p>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20">
+    <div class="grid gap-6 sm:grid-cols-2">
+      {servicios.map((s) => <ServiceCard {...s} />)}
+    </div>
+  </section>
+
+  <!-- COMO FUNCIONA -->
+  <section class="bg-crema-200/60 py-16 sm:py-20">
+    <div class="mx-auto max-w-7xl px-5 sm:px-8">
+      <SectionKicker text="Paso a paso" dot="bg-brand-500" />
+      <h2 class="mt-4 font-display text-3xl font-bold text-tinta-900 sm:text-4xl">
+        Así funciona la igualación de color
+      </h2>
+
+      <div class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        {pasos.map((p, i) => (
+          <div class="relative">
+            <span class="font-display text-6xl font-bold text-brand-500/15">{p.n}</span>
+            <h3 class="-mt-6 font-display text-lg font-bold text-tinta-900">{p.title}</h3>
+            <p class="mt-2 text-sm leading-relaxed text-tinta-500">{p.text}</p>
+            {i < pasos.length - 1 && (
+              <svg class="absolute -right-6 top-6 hidden h-5 w-5 text-brand-300 lg:block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <CTABand
+    title="Agenda tu igualación de color"
+    subtitle="Escríbenos con una foto de tu muestra y te decimos si podemos igualarla antes de que llegues a la tienda."
+    primaryLabel="Ver sucursales"
+    primaryHref="/sucursales"
+    secondaryLabel="Escríbenos"
+    secondaryHref="/contacto"
+  />
+</BaseLayout>

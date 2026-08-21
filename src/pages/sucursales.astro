@@ -1,0 +1,54 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SectionKicker from "../components/SectionKicker.astro";
+import SucursalCard from "../components/SucursalCard.astro";
+import CTABand from "../components/CTABand.astro";
+
+const sucursales = [
+  {
+    nombre: "Súper Color — Comayagüela Centro",
+    direccion: "Barrio El Centro, 4ta Avenida, frente al Mercado San Isidro, Comayagüela, Tegucigalpa",
+    telefono: "+504 2220-1144",
+    horario: "Lun–Sáb: 8:00 am – 6:00 pm · Dom: 8:00 am – 12:00 pm",
+    gradient: "bg-gradient-to-br from-brand-500 to-brand-700",
+  },
+  {
+    nombre: "Súper Color — Boulevard Suyapa",
+    direccion: "Boulevard Suyapa, contiguo a Farmacia Kielsa, salida hacia la UNAH, Tegucigalpa",
+    telefono: "+504 2235-8890",
+    horario: "Lun–Sáb: 8:00 am – 6:00 pm",
+    gradient: "bg-gradient-to-br from-cielo-500 to-cielo-700",
+  },
+];
+---
+
+<BaseLayout title="Sucursales" description="Encuentra la sucursal de Súper Color más cercana a ti en Tegucigalpa.">
+  <section class="relative overflow-hidden">
+    <div class="absolute inset-x-0 top-0 h-64 bg-gradient-to-br from-crema-200 to-crema-100"></div>
+    <div class="relative mx-auto max-w-4xl px-5 pb-6 pt-16 text-center sm:px-8 sm:pt-20">
+      <SectionKicker text="Visítanos" dot="bg-cielo-500" />
+      <h1 class="mt-6 font-display text-4xl font-bold text-tinta-900 sm:text-5xl">
+        Dos sucursales, un mismo color exacto
+      </h1>
+      <p class="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-tinta-500">
+        Pasa por cualquiera de nuestras tiendas para ver el catálogo completo,
+        igualar un color o simplemente pedir consejo.
+      </p>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
+    <div class="grid gap-6 sm:grid-cols-2">
+      {sucursales.map((s) => <SucursalCard {...s} />)}
+    </div>
+  </section>
+
+  <CTABand
+    title="¿Prefieres que te ayudemos a distancia?"
+    subtitle="Envíanos tu ubicación y una foto de tu proyecto, y te decimos qué necesitas antes de que salgas de casa."
+    primaryLabel="Ver productos"
+    primaryHref="/productos"
+    secondaryLabel="Escríbenos"
+    secondaryHref="/contacto"
+  />
+</BaseLayout>

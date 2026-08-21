@@ -1,0 +1,93 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SectionKicker from "../components/SectionKicker.astro";
+import PromoCard from "../components/PromoCard.astro";
+import CTABand from "../components/CTABand.astro";
+
+const promos = [
+  {
+    badge: "Temporada",
+    title: "20% en pinturas de agua",
+    description: "Aplica en toda la línea de pinturas de agua para interiores, en ambas sucursales.",
+    detail: "Válido durante agosto",
+    gradient: "bg-gradient-to-br from-menta-400 to-menta-600",
+    tilt: "left" as const,
+  },
+  {
+    badge: "Combo",
+    title: "Igualación + galón gratis",
+    description: "Al igualar un color nuevo, tu primer galón en base de agua sale sin costo.",
+    detail: "Solo en sucursal Comayagüela",
+    gradient: "bg-gradient-to-br from-brand-400 to-brand-600",
+    tilt: "none" as const,
+  },
+  {
+    badge: "Fidelidad",
+    title: "5ta lata con descuento",
+    description: "Acumula compras en tu cuenta de cliente frecuente y la quinta lata tiene 30% off.",
+    detail: "Pregunta en caja",
+    gradient: "bg-gradient-to-br from-cielo-400 to-cielo-600",
+    tilt: "right" as const,
+  },
+  {
+    badge: "Lluvia",
+    title: "Impermeabilizante 2x1",
+    description: "Lleva dos cubetas de impermeabilizante y paga solo una durante la temporada lluviosa.",
+    detail: "Mientras dure el inventario",
+    gradient: "bg-gradient-to-br from-mandarina-400 to-mandarina-600",
+    tilt: "left" as const,
+  },
+  {
+    badge: "Estudiantes",
+    title: "15% en accesorios",
+    description: "Brochas, rodillos y cinta con descuento para proyectos escolares, presentando carnet.",
+    detail: "Todo el año",
+    gradient: "bg-gradient-to-br from-sol-400 to-sol-600",
+    tilt: "none" as const,
+  },
+  {
+    badge: "Referidos",
+    title: "L.100 en tu próxima compra",
+    description: "Por cada amigo que refieras y compre, ambos reciben un crédito para su siguiente visita.",
+    detail: "Acumulable",
+    gradient: "bg-gradient-to-br from-fiesta-400 to-fiesta-600",
+    tilt: "right" as const,
+  },
+];
+---
+
+<BaseLayout title="Promociones" description="Ofertas y descuentos vigentes en Súper Color.">
+  <section class="relative overflow-hidden bg-tinta-900">
+    <div class="pointer-events-none absolute -left-16 top-0 h-56 w-56 rounded-full bg-mandarina-500/30 blur-3xl"></div>
+    <div class="pointer-events-none absolute -right-16 bottom-0 h-64 w-64 rounded-full bg-fiesta-500/25 blur-3xl"></div>
+    <div class="relative mx-auto max-w-4xl px-5 py-20 text-center sm:px-8 sm:py-24">
+      <SectionKicker text="Ofertas vigentes" dot="bg-sol-500" light />
+      <h1 class="mt-6 font-display text-4xl font-bold text-crema-50 sm:text-5xl">
+        Más color por tu dinero
+      </h1>
+      <p class="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-crema-100/75">
+        Estas son nuestras promociones activas. Se actualizan cada mes, así que
+        vuelve seguido o síguenos en redes sociales para no perderte ninguna.
+      </p>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20">
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {promos.map((p) => <PromoCard {...p} />)}
+    </div>
+    <p class="mt-10 text-center text-xs text-tinta-500">
+      * Contenido de muestra. Precios, porcentajes y vigencias son ilustrativos
+      y serán reemplazados por las promociones reales de la tienda.
+    </p>
+  </section>
+
+  <CTABand
+    title="¿Quieres que te avisemos de nuevas ofertas?"
+    subtitle="Síguenos en redes sociales o pasa por la tienda — pronto tendrás más formas de enterarte primero."
+    primaryLabel="Ver sucursales"
+    primaryHref="/sucursales"
+    secondaryLabel="Contáctanos"
+    secondaryHref="/contacto"
+  />
+</BaseLayout>

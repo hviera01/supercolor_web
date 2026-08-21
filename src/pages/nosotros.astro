@@ -1,0 +1,120 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SectionKicker from "../components/SectionKicker.astro";
+import CTABand from "../components/CTABand.astro";
+
+const valores = [
+  {
+    title: "Precisión de color",
+    description: "Cada mezcla se revisa contra la muestra original antes de entregarla.",
+    color: "bg-brand-500",
+  },
+  {
+    title: "Asesoría honesta",
+    description: "Te decimos qué producto rinde más para tu proyecto, no el más caro.",
+    color: "bg-cielo-500",
+  },
+  {
+    title: "Rapidez",
+    description: "La mayoría de igualaciones están listas en menos de 20 minutos.",
+    color: "bg-menta-500",
+  },
+  {
+    title: "Cercanía",
+    description: "Conocemos a nuestros clientes por nombre, no por número de factura.",
+    color: "bg-mandarina-500",
+  },
+];
+
+const hitos = [
+  { year: "2004", text: "Abrimos nuestro primer local en el centro de Tegucigalpa vendiendo pinturas de aceite." },
+  { year: "2011", text: "Incorporamos el sistema de igualación de color por máquina, una novedad en la zona." },
+  { year: "2017", text: "Abrimos nuestra segunda sucursal para atender el sector de Comayagüela." },
+  { year: "Hoy", text: "Seguimos siendo un negocio familiar, con el mismo compromiso de encontrar tu color exacto." },
+];
+---
+
+<BaseLayout title="Nosotros" description="Conoce la historia, los valores y el equipo detrás de Súper Color.">
+  <section class="relative overflow-hidden bg-tinta-900">
+    <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand-500/40 blur-3xl"></div>
+    <div class="pointer-events-none absolute bottom-0 left-1/4 h-40 w-40 rounded-full bg-sol-500/20 blur-2xl"></div>
+    <div class="relative mx-auto max-w-4xl px-5 py-20 text-center sm:px-8 sm:py-28">
+      <SectionKicker text="Nuestra historia" dot="bg-sol-500" light />
+      <h1 class="mt-6 font-display text-4xl font-bold text-crema-50 sm:text-5xl">
+        Un negocio de familia, pintado con más de 20 años de color
+      </h1>
+      <p class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-crema-100/75">
+        Súper Color nació de una idea simple: que nadie tenga que conformarse con
+        "casi" el color que quería. Hoy seguimos siendo la misma tienda de barrio,
+        con mejor tecnología para igualar cualquier tono.
+      </p>
+    </div>
+  </section>
+
+  <!-- HISTORIA / TIMELINE -->
+  <section class="mx-auto max-w-5xl px-5 py-16 sm:px-8 sm:py-20">
+    <SectionKicker text="Cómo llegamos aquí" dot="bg-brand-500" />
+    <h2 class="mt-4 font-display text-3xl font-bold text-tinta-900 sm:text-4xl">Nuestro recorrido</h2>
+
+    <ol class="mt-12 space-y-10 border-l-4 border-dashed border-brand-200 pl-8">
+      {hitos.map((h, i) => (
+        <li class="relative">
+          <span class="absolute -left-[2.65rem] grid h-8 w-8 place-items-center rounded-full bg-brand-500 font-display text-xs font-bold text-crema-50">
+            {i + 1}
+          </span>
+          <p class="font-display text-lg font-bold text-brand-600">{h.year}</p>
+          <p class="mt-1 max-w-xl text-tinta-500">{h.text}</p>
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <!-- VALORES -->
+  <section class="bg-crema-200/60 py-16 sm:py-20">
+    <div class="mx-auto max-w-7xl px-5 sm:px-8">
+      <SectionKicker text="Lo que nos define" dot="bg-fiesta-500" />
+      <h2 class="mt-4 font-display text-3xl font-bold text-tinta-900 sm:text-4xl">Nuestros valores</h2>
+
+      <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {valores.map((v) => (
+          <div class="blob-corner border border-tinta-900/5 bg-crema-50 p-6 shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-lg">
+            <span class={`inline-block h-3 w-10 rounded-full ${v.color}`}></span>
+            <h3 class="mt-4 font-display text-lg font-bold text-tinta-900">{v.title}</h3>
+            <p class="mt-2 text-sm leading-relaxed text-tinta-500">{v.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- MISION / VISION -->
+  <section class="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20">
+    <div class="grid gap-6 lg:grid-cols-2">
+      <div class="blob-corner bg-gradient-to-br from-brand-500 to-brand-700 p-9 text-crema-50">
+        <h3 class="font-display text-2xl font-bold">Misión</h3>
+        <p class="mt-4 leading-relaxed text-crema-100/85">
+          Ayudar a cada cliente a encontrar y reproducir el color exacto que
+          necesita, con productos de calidad y asesoría cercana, en el menor
+          tiempo posible.
+        </p>
+      </div>
+      <div class="blob-corner-alt bg-gradient-to-br from-cielo-500 to-cielo-700 p-9 text-crema-50">
+        <h3 class="font-display text-2xl font-bold">Visión</h3>
+        <p class="mt-4 leading-relaxed text-crema-100/85">
+          Ser la referencia hondureña en igualación de color, expandiendo
+          nuestras sucursales sin perder el trato cercano que nos identifica
+          desde el primer local.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <CTABand
+    title="¿Quieres conocernos en persona?"
+    subtitle="Pasa por cualquiera de nuestras sucursales y conversemos sobre tu próximo proyecto."
+    primaryLabel="Ver sucursales"
+    primaryHref="/sucursales"
+    secondaryLabel="Contáctanos"
+    secondaryHref="/contacto"
+  />
+</BaseLayout>

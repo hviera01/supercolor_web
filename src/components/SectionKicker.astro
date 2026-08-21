@@ -1,0 +1,19 @@
+---
+interface Props {
+  text: string;
+  dot?: string; // clase Tailwind, ej. "bg-brand-500"
+  light?: boolean;
+}
+const { text, dot = "bg-brand-500", light = false } = Astro.props;
+---
+
+<span
+  class={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-bold uppercase tracking-[0.14em] ${
+    light
+      ? "border-crema-50/20 bg-crema-50/10 text-crema-50"
+      : "border-tinta-900/10 bg-crema-50 text-tinta-700"
+  }`}
+>
+  <span class={`h-2 w-2 rounded-full ${dot}`}></span>
+  {text}
+</span>

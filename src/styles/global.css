@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+@theme {
+  /* Tipografía */
+  --font-display: "Baloo 2", ui-rounded, "Segoe UI", sans-serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+  /* Rojo Súper Color — color ancla de marca (#C62828) */
+  --color-brand-50: #fdeceb;
+  --color-brand-100: #fbd4d2;
+  --color-brand-200: #f4a6a2;
+  --color-brand-300: #ec7873;
+  --color-brand-400: #da4d47;
+  --color-brand-500: #c62828;
+  --color-brand-600: #a81f1f;
+  --color-brand-700: #841a1a;
+  --color-brand-800: #611414;
+  --color-brand-900: #3d0d0d;
+
+  /* Amarillo "Sol" */
+  --color-sol-300: #ffe08a;
+  --color-sol-400: #ffd54f;
+  --color-sol-500: #ffc107;
+  --color-sol-600: #f0a500;
+  --color-sol-700: #c98600;
+
+  /* Verde "Menta" */
+  --color-menta-300: #8fd6a5;
+  --color-menta-400: #5cbe7a;
+  --color-menta-500: #2e9e4f;
+  --color-menta-600: #227a3c;
+  --color-menta-700: #195c2d;
+
+  /* Azul "Cielo" */
+  --color-cielo-300: #92b9e8;
+  --color-cielo-400: #4a8fdb;
+  --color-cielo-500: #1565c0;
+  --color-cielo-600: #0d4c99;
+  --color-cielo-700: #0a3a75;
+
+  /* Magenta "Fiesta" */
+  --color-fiesta-300: #eb9ac0;
+  --color-fiesta-400: #e8579e;
+  --color-fiesta-500: #d6247a;
+  --color-fiesta-600: #ad1961;
+  --color-fiesta-700: #85134b;
+
+  /* Naranja "Mandarina" */
+  --color-mandarina-300: #ffb98c;
+  --color-mandarina-400: #ff8a4c;
+  --color-mandarina-500: #f46a1e;
+  --color-mandarina-600: #d2530f;
+  --color-mandarina-700: #a5410c;
+
+  /* Crema — fondo cálido, no blanco puro */
+  --color-crema-50: #fffdfb;
+  --color-crema-100: #fff8f0;
+  --color-crema-200: #fcefdd;
+  --color-crema-300: #f5e2c8;
+
+  /* Tinta — texto oscuro cálido, no negro puro */
+  --color-tinta-500: #6b6862;
+  --color-tinta-700: #3d3b38;
+  --color-tinta-900: #1a1a1a;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: var(--color-crema-100);
+    color: var(--color-tinta-900);
+    font-family: var(--font-sans);
+  }
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+@layer utilities {
+  /* Borde de "gota" para tarjetas y bloques — evita el rectángulo perfecto genérico */
+  .blob-corner {
+    border-radius: 2.5rem 2.5rem 2.5rem 0.5rem;
+  }
+  .blob-corner-alt {
+    border-radius: 2.5rem 0.5rem 2.5rem 2.5rem;
+  }
+  .drip-underline {
+    background-image: radial-gradient(circle, currentColor 55%, transparent 60%);
+    background-position: bottom;
+    background-size: 10px 6px;
+    background-repeat: repeat-x;
+  }
+}

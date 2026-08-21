@@ -1,0 +1,28 @@
+---
+interface Props {
+  name: string;
+  description: string;
+  color: string; // clase Tailwind de fondo para la lata, ej. "bg-brand-500"
+  gradient: string; // clases Tailwind de gradiente para el bloque superior
+  tag?: string;
+}
+const { name, description, color, gradient, tag } = Astro.props;
+import PaintCan from "./PaintCan.astro";
+---
+
+<article class="group blob-corner overflow-hidden border border-tinta-900/5 bg-crema-50 shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-xl">
+  <div class={`relative flex h-40 items-end justify-center overflow-hidden ${gradient} pt-6`}>
+    <div class="absolute -left-6 -top-6 h-24 w-24 rounded-full bg-white/10"></div>
+    <div class="absolute -right-4 top-8 h-14 w-14 rounded-full bg-white/10"></div>
+    {tag && (
+      <span class="absolute left-4 top-4 rounded-full bg-crema-50/95 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-tinta-900">
+        {tag}
+      </span>
+    )}
+    <PaintCan color={color} class="translate-y-6 transition-transform group-hover:-translate-y-1 group-hover:rotate-3" />
+  </div>
+  <div class="p-6">
+    <h3 class="font-display text-xl font-bold text-tinta-900">{name}</h3>
+    <p class="mt-2 text-sm leading-relaxed text-tinta-500">{description}</p>
+  </div>
+</article>

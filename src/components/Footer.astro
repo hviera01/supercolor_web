@@ -1,0 +1,96 @@
+---
+import BrandMark from "./BrandMark.astro";
+
+const year = new Date().getFullYear();
+
+const swatches = [
+  "bg-brand-500",
+  "bg-sol-500",
+  "bg-menta-500",
+  "bg-cielo-500",
+  "bg-fiesta-500",
+  "bg-mandarina-500",
+];
+
+const linkCols = [
+  {
+    title: "Explora",
+    links: [
+      { href: "/nosotros", label: "Nosotros" },
+      { href: "/productos", label: "Productos" },
+      { href: "/servicios", label: "Servicios" },
+      { href: "/promociones", label: "Promociones" },
+    ],
+  },
+  {
+    title: "Visítanos",
+    links: [
+      { href: "/sucursales", label: "Sucursales" },
+      { href: "/contacto", label: "Contacto" },
+    ],
+  },
+];
+---
+
+<footer class="bg-tinta-900 text-crema-100">
+  <div class="flex h-2.5 w-full">
+    {swatches.map((c) => (
+      <span class={`h-full flex-1 ${c}`}></span>
+    ))}
+  </div>
+
+  <div class="mx-auto grid max-w-7xl gap-10 px-5 py-14 sm:px-8 lg:grid-cols-[1.3fr_1fr_1fr_1.2fr]">
+    <div>
+      <BrandMark variant="light" showTagline />
+      <p class="mt-4 max-w-sm text-sm leading-relaxed text-crema-100/70">
+        Pinturas, esmaltes e igualación de color a medida. Más de una generación
+        ayudando a hondureños a encontrar el color exacto que tienen en mente.
+      </p>
+      <div class="mt-5 flex gap-3">
+        {["Facebook", "Instagram", "WhatsApp"].map((label) => (
+          <a
+            href="#"
+            aria-label={label}
+            class="grid h-10 w-10 place-items-center rounded-full bg-crema-100/10 text-xs font-bold text-crema-100 transition-colors hover:bg-brand-500"
+          >
+            {label.slice(0, 2)}
+          </a>
+        ))}
+      </div>
+    </div>
+
+    {linkCols.map((col) => (
+      <div>
+        <h3 class="font-display text-sm font-bold uppercase tracking-wide text-sol-400">
+          {col.title}
+        </h3>
+        <ul class="mt-4 space-y-2.5 text-sm text-crema-100/80">
+          {col.links.map((l) => (
+            <li>
+              <a href={l.href} class="transition-colors hover:text-crema-50">{l.label}</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+
+    <div>
+      <h3 class="font-display text-sm font-bold uppercase tracking-wide text-sol-400">
+        Contacto directo
+      </h3>
+      <ul class="mt-4 space-y-2.5 text-sm text-crema-100/80">
+        <li>Tegucigalpa, Honduras</li>
+        <li>+504 2234-5678</li>
+        <li>ventas@supercolorhn.com</li>
+        <li>Lun–Sáb: 8:00 am – 6:00 pm</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="border-t border-crema-100/10">
+    <div class="mx-auto flex max-w-7xl flex-col gap-2 px-5 py-5 text-xs text-crema-100/60 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+      <p>© {year} Súper Color. Todos los derechos reservados.</p>
+      <p>Sitio informativo — contenido de muestra, sujeto a actualización.</p>
+    </div>
+  </div>
+</footer>

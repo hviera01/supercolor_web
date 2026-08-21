@@ -1,0 +1,79 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SectionKicker from "../components/SectionKicker.astro";
+import ProductCard from "../components/ProductCard.astro";
+import CTABand from "../components/CTABand.astro";
+
+const productos = [
+  {
+    name: "Pinturas de aceite",
+    description: "Acabado resistente y brillante para madera y metal, interior o exterior. Ideal para puertas, muebles y estructuras expuestas al clima.",
+    color: "bg-brand-500",
+    gradient: "bg-gradient-to-br from-brand-500 to-brand-700",
+    tag: "Más vendida",
+  },
+  {
+    name: "Esmaltes",
+    description: "Protección duradera contra el óxido y el desgaste diario en superficies metálicas, portones, verjas y láminas.",
+    color: "bg-cielo-500",
+    gradient: "bg-gradient-to-br from-cielo-400 to-cielo-600",
+  },
+  {
+    name: "Pinturas de agua",
+    description: "Bajo olor, secado rápido y fácil limpieza. La opción favorita para paredes interiores de casa y oficina.",
+    color: "bg-menta-500",
+    gradient: "bg-gradient-to-br from-menta-400 to-menta-600",
+  },
+  {
+    name: "Colores personalizados",
+    description: "Igualamos cualquier muestra que traigas —tela, foto o pedazo de pared— con nuestro sistema de mezcla computarizado.",
+    color: "bg-fiesta-500",
+    gradient: "bg-gradient-to-br from-fiesta-400 to-fiesta-600",
+    tag: "A tu medida",
+  },
+  {
+    name: "Impermeabilizantes",
+    description: "Sella techos y paredes contra la lluvia y la humedad, con garantía de larga duración en temporada lluviosa.",
+    color: "bg-mandarina-500",
+    gradient: "bg-gradient-to-br from-mandarina-400 to-mandarina-600",
+    tag: "Temporada",
+  },
+  {
+    name: "Accesorios",
+    description: "Brochas, rodillos, cinta de enmascarar, lijas y todo lo necesario para dejar tu proyecto con acabado profesional.",
+    color: "bg-sol-500",
+    gradient: "bg-gradient-to-br from-sol-400 to-sol-600",
+  },
+];
+---
+
+<BaseLayout title="Productos" description="Catálogo de pinturas, esmaltes, impermeabilizantes y accesorios de Súper Color.">
+  <section class="relative overflow-hidden">
+    <div class="absolute inset-x-0 top-0 h-64 bg-gradient-to-br from-crema-200 to-crema-100"></div>
+    <div class="relative mx-auto max-w-4xl px-5 pb-6 pt-16 text-center sm:px-8 sm:pt-20">
+      <SectionKicker text="Catálogo completo" dot="bg-brand-500" />
+      <h1 class="mt-6 font-display text-4xl font-bold text-tinta-900 sm:text-5xl">
+        Todo lo que necesitas para pintar bien
+      </h1>
+      <p class="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-tinta-500">
+        Seis categorías, un mismo estándar de calidad. Si no ves el color que
+        buscas, lo mezclamos frente a ti.
+      </p>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {productos.map((p) => <ProductCard {...p} />)}
+    </div>
+  </section>
+
+  <CTABand
+    title="¿No encontraste el color exacto?"
+    subtitle="Nuestro servicio de igualación de color existe justo para eso. Trae tu muestra y lo resolvemos en minutos."
+    primaryLabel="Ver servicio de igualación"
+    primaryHref="/servicios"
+    secondaryLabel="Contáctanos"
+    secondaryHref="/contacto"
+  />
+</BaseLayout>

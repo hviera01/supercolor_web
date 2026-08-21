@@ -1,0 +1,39 @@
+---
+interface Props {
+  variant?: "light" | "dark";
+  showTagline?: boolean;
+  class?: string;
+}
+const { variant = "dark", showTagline = false, class: className = "" } = Astro.props;
+const textColor = variant === "light" ? "text-crema-50" : "text-tinta-900";
+---
+
+<a href="/" class={`group inline-flex items-center gap-2.5 ${className}`}>
+  <span class="relative grid h-10 w-10 shrink-0 place-items-center">
+    <svg viewBox="0 0 64 64" class="h-10 w-10 drop-shadow-sm transition-transform group-hover:-rotate-6">
+      <path
+        d="M32 4c9 12 18 22 18 33a18 18 0 1 1-36 0C14 26 23 16 32 4Z"
+        fill="#C62828"
+      ></path>
+      <path
+        d="M23 38a9 9 0 0 0 9 9"
+        stroke="#FFF8F0"
+        stroke-width="4.5"
+        stroke-linecap="round"
+        fill="none"
+      ></path>
+    </svg>
+    <span class="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-sol-500"></span>
+    <span class="absolute -bottom-0.5 left-6 h-2 w-2 rounded-full bg-cielo-500"></span>
+  </span>
+  <span class="leading-tight">
+    <span class={`block font-display text-xl font-bold tracking-tight ${textColor}`}>
+      Súper <span class="text-brand-500">Color</span>
+    </span>
+    {showTagline && (
+      <span class="block text-[11px] font-semibold uppercase tracking-[0.18em] text-tinta-500">
+        La decisión correcta
+      </span>
+    )}
+  </span>
+</a>
