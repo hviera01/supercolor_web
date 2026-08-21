@@ -4,28 +4,28 @@ import SectionKicker from "../components/SectionKicker.astro";
 import CTABand from "../components/CTABand.astro";
 ---
 
-<BaseLayout title="Sucursales" description="Encuentra la sucursal de Súper Color más cercana a ti en Tegucigalpa.">
+<BaseLayout title="Ubicación" description="Encuentra nuestra tienda Súper Color en Danlí, El Paraíso.">
   <section class="relative overflow-hidden">
     <div class="absolute inset-x-0 top-0 h-64 bg-gradient-to-br from-crema-200 to-crema-100"></div>
     <div class="relative mx-auto max-w-4xl px-5 pb-6 pt-16 text-center sm:px-8 sm:pt-20">
       <SectionKicker text="Visítanos" dot="bg-cielo-500" />
       <h1 class="mt-6 font-display text-4xl font-bold text-tinta-900 sm:text-5xl">
-        Dos sucursales, un mismo color exacto
+        Nuestra tienda, un mismo color exacto
       </h1>
       <p class="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-tinta-500">
-        Pasa por cualquiera de nuestras tiendas para ver el catálogo completo,
-        igualar un color o simplemente pedir consejo.
+        Pasa por nuestra tienda en Danlí para ver el catálogo completo,
+        igualar un color a mano o simplemente pedir consejo.
       </p>
     </div>
   </section>
 
   <section class="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
-    <div id="sucursales-list" class="grid gap-6 sm:grid-cols-2"></div>
+    <div id="sucursales-list" class="mx-auto grid max-w-xl gap-6"></div>
   </section>
 
   <CTABand
     title="¿Prefieres que te ayudemos a distancia?"
-    subtitle="Envíanos tu ubicación y una foto de tu proyecto, y te decimos qué necesitas antes de que salgas de casa."
+    subtitle="Envíanos una foto de tu proyecto o de la muestra que quieres igualar, y te decimos qué necesitas antes de que salgas de casa."
     primaryLabel="Ver productos"
     primaryHref="/productos"
     secondaryLabel="Escríbenos"
@@ -95,7 +95,7 @@ import CTABand from "../components/CTABand.astro";
       return;
     }
     if (data.length === 0) {
-      contenedor.innerHTML = estadoVacioHtml("Pronto vas a ver aquí nuestras sucursales.");
+      contenedor.innerHTML = estadoVacioHtml("Pronto vas a ver aquí nuestra ubicación.");
       return;
     }
     contenedor.innerHTML = data.map((s, i) => tarjetaHtml(s, i)).join("");

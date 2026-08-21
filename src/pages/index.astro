@@ -9,27 +9,27 @@ import CTABand from "../components/CTABand.astro";
 
 const categorias = [
   {
-    name: "Pinturas de aceite",
-    description: "Acabado resistente y brillante para madera y metal, interior o exterior.",
+    name: "Látex acrílica",
+    description: "Bajo olor y secado rápido, ideal para paredes interiores y exteriores de casa u oficina.",
     color: "bg-brand-500",
     gradient: "bg-gradient-to-br from-brand-500 to-brand-700",
     tag: "Más vendida",
   },
   {
-    name: "Esmaltes",
-    description: "Protección duradera contra el óxido y el desgaste diario en superficies metálicas.",
+    name: "Aceite",
+    description: "Acabado resistente y brillante para madera y metal, interior o exterior.",
     color: "bg-cielo-500",
     gradient: "bg-gradient-to-br from-cielo-400 to-cielo-600",
   },
   {
-    name: "Pinturas de agua",
-    description: "Bajo olor y secado rápido, ideal para paredes interiores de casa y oficina.",
+    name: "Anticorrosivos",
+    description: "Protección duradera contra el óxido y el desgaste diario en superficies metálicas.",
     color: "bg-menta-500",
     gradient: "bg-gradient-to-br from-menta-400 to-menta-600",
   },
   {
-    name: "Colores personalizados",
-    description: "Igualamos cualquier muestra: tela, foto o pared, con nuestro sistema de mezcla.",
+    name: "Colores a la medida",
+    description: "Igualamos a mano cualquier muestra: tela, foto o pared, hasta que el tono quede exacto.",
     color: "bg-fiesta-500",
     gradient: "bg-gradient-to-br from-fiesta-400 to-fiesta-600",
     tag: "A tu medida",
@@ -38,16 +38,16 @@ const categorias = [
 
 const servicios = [
   {
-    title: "Igualación de color",
-    description: "Trae una muestra y la igualamos con precisión usando nuestro sistema de mezcla.",
+    title: "Igualación de color a mano",
+    description: "Trae una muestra o envíanos una foto, y nuestro equipo la iguala a mano hasta que quede exacta.",
     color: "bg-brand-500",
     icon: "swatch" as const,
   },
   {
-    title: "Mezcla a medida",
-    description: "Preparamos el tono exacto que necesitas, en la cantidad que necesitas.",
+    title: "Proyectos de pintura",
+    description: "Nuestro propio equipo de pintores pinta tu casa o negocio completo, de principio a fin.",
     color: "bg-mandarina-500",
-    icon: "mix" as const,
+    icon: "roller" as const,
   },
 ];
 ---
@@ -81,9 +81,10 @@ const servicios = [
           , sin adivinar.
         </h1>
         <p id="hero-descripcion" class="mt-6 max-w-lg text-lg leading-relaxed text-tinta-500">
-          En Súper Color igualamos, mezclamos y asesoramos para que cada lata que
-          te llevas sea exactamente el tono que tenías en mente. Pinturas de
-          aceite, agua, esmaltes y color a medida — todo en un solo lugar.
+          Somos un negocio familiar en Danlí con más de 20 años preparando
+          color a la medida, a mano y sin prisa, hasta que quede exactamente
+          el tono que tenías en mente. Látex, aceite, anticorrosivos y color
+          a medida — todo en un solo lugar.
         </p>
         <div class="mt-9 flex flex-wrap gap-3">
           <a
@@ -105,20 +106,20 @@ const servicios = [
             <dd class="text-xs font-semibold uppercase tracking-wide text-tinta-500">Años de experiencia</dd>
           </div>
           <div>
-            <dt class="font-display text-2xl font-bold text-brand-500">+3,000</dt>
-            <dd class="text-xs font-semibold uppercase tracking-wide text-tinta-500">Tonos igualados</dd>
+            <dt class="font-display text-2xl font-bold text-brand-500">LANCO</dt>
+            <dd class="text-xs font-semibold uppercase tracking-wide text-tinta-500">Distribuidor oficial</dd>
           </div>
           <div>
-            <dt class="font-display text-2xl font-bold text-brand-500">2</dt>
-            <dd class="text-xs font-semibold uppercase tracking-wide text-tinta-500">Sucursales</dd>
+            <dt class="font-display text-2xl font-bold text-brand-500">100%</dt>
+            <dd class="text-xs font-semibold uppercase tracking-wide text-tinta-500">Color garantizado hasta que quedes conforme</dd>
           </div>
         </dl>
       </div>
 
       <div class="relative z-10 flex items-end justify-center gap-4 pt-6 lg:justify-end lg:pr-6">
-        <PaintCan color="bg-sol-500" label="Sol" tilt="left" class="mb-6" />
-        <PaintCan color="bg-brand-500" label="Súper" tilt="none" class="scale-110" />
-        <PaintCan color="bg-cielo-500" label="Cielo" tilt="right" class="mb-10" />
+        <PaintCan color="bg-sol-500" label="Interior" tilt="left" class="mb-6" />
+        <PaintCan color="bg-brand-500" label="Exterior" tilt="none" class="scale-110" />
+        <PaintCan color="bg-cielo-500" label="A tu medida" tilt="right" class="mb-10" />
       </div>
     </div>
   </section>
@@ -171,8 +172,8 @@ const servicios = [
     <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       <PromoCard
         badge="Temporada"
-        title="20% en pinturas de agua"
-        description="Aplica en toda la línea de pinturas de agua para interiores, en ambas sucursales."
+        title="20% en pinturas látex"
+        description="Aplica en toda la línea de pinturas látex acrílica para interiores, en tienda."
         detail="Válido durante agosto"
         gradient="bg-gradient-to-br from-menta-400 to-menta-600"
         tilt="left"
@@ -180,8 +181,8 @@ const servicios = [
       <PromoCard
         badge="Combo"
         title="Igualación + galón gratis"
-        description="Al igualar un color nuevo, tu primer galón en base de agua sale sin costo."
-        detail="Solo en sucursal Tegucigalpa"
+        description="Al igualar un color nuevo a mano, tu primer galón en base de agua sale sin costo."
+        detail="Solo en tienda"
         gradient="bg-gradient-to-br from-brand-400 to-brand-600"
       />
       <PromoCard
@@ -201,9 +202,9 @@ const servicios = [
 
   <CTABand
     title="Trae tu muestra, nosotros ponemos el color."
-    subtitle="Ya sea una tela, una foto o un pedazo de pared, nuestro equipo lo iguala frente a ti en minutos."
-    primaryLabel="Buscar sucursal"
-    primaryHref="/sucursales"
+    subtitle="Ya sea una tela, una foto o un pedazo de pared, nuestro equipo lo iguala a mano hasta que quede exacto. También puedes enviarnos una foto para cotizar sin visitarnos."
+    primaryLabel="Ver ubicación"
+    primaryHref="/ubicacion"
     secondaryLabel="Escríbenos por WhatsApp"
     secondaryHref="/contacto"
   />

@@ -4,14 +4,14 @@ import SectionKicker from "../components/SectionKicker.astro";
 import CTABand from "../components/CTABand.astro";
 
 const pasos = [
-  { n: "1", title: "Trae tu muestra", text: "Una tela, una foto, un pedazo de pared o simplemente cuéntanos la idea." },
-  { n: "2", title: "Escaneamos el color", text: "Nuestro equipo mide el tono exacto con el sistema de igualación." },
-  { n: "3", title: "Mezclamos frente a ti", text: "Preparamos la fórmula y la ajustamos hasta que coincida perfecto." },
-  { n: "4", title: "Te llevas tu color", text: "Listo en minutos, con la fórmula guardada por si necesitas más." },
+  { n: "1", title: "Trae tu muestra o envía una foto", text: "Una tela, una foto, un pedazo de pared o simplemente cuéntanos la idea, en tienda o por WhatsApp." },
+  { n: "2", title: "Comparamos a simple vista", text: "Nuestro equipo compara el tono contra tu muestra o foto, a ojo y a mano, sin máquinas." },
+  { n: "3", title: "Mezclamos y ajustamos", text: "Preparamos la fórmula y la ajustamos las veces que haga falta hasta que coincida perfecto." },
+  { n: "4", title: "Te llevas tu color", text: "Entregamos el color hasta que quedes conforme, con la fórmula guardada por si necesitas más." },
 ];
 ---
 
-<BaseLayout title="Servicios" description="Igualación de color, mezcla a medida, asesoría y entrega a domicilio en Súper Color.">
+<BaseLayout title="Servicios" description="Preparación de color a la medida, proyectos de pintura con equipo propio, asesoría y distribución oficial LANCO en Súper Color.">
   <section class="relative overflow-hidden bg-tinta-900">
     <div class="pointer-events-none absolute -left-20 top-10 h-64 w-64 rounded-full bg-fiesta-500/30 blur-3xl"></div>
     <div class="pointer-events-none absolute -right-10 bottom-0 h-56 w-56 rounded-full bg-cielo-500/25 blur-3xl"></div>
@@ -22,7 +22,7 @@ const pasos = [
       </h1>
       <p class="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-crema-100/75">
         Más que una tienda de pinturas: somos el equipo que resuelve el "¿qué
-        color era?" de tu próximo proyecto.
+        color era?" de tu próximo proyecto, y el equipo que lo pinta si lo necesitas.
       </p>
     </div>
   </section>
@@ -58,9 +58,9 @@ const pasos = [
 
   <CTABand
     title="Agenda tu igualación de color"
-    subtitle="Escríbenos con una foto de tu muestra y te decimos si podemos igualarla antes de que llegues a la tienda."
-    primaryLabel="Ver sucursales"
-    primaryHref="/sucursales"
+    subtitle="Escríbenos con una foto de tu muestra y te damos una cotización antes de que llegues a la tienda."
+    primaryLabel="Ver ubicación"
+    primaryHref="/ubicacion"
     secondaryLabel="Escríbenos"
     secondaryHref="/contacto"
   />
@@ -78,15 +78,48 @@ const pasos = [
 
   const contenedor = document.getElementById("servicios-list");
 
+  // Icono genérico, usado solo si el título del servicio no coincide con ningún patrón conocido.
   const iconoPorDefecto =
     'M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z';
+
+  // Pares [patrón de palabras clave, icono] evaluados en orden contra el título del servicio.
+  // Estilo de trazo consistente con los demás SVG del sitio (stroke-linecap/linejoin redondeados).
+  // Orden de más a menos específico: "Asesoría en pinturas y color" debe caer en el
+  // foco de asesoría, no en el rodillo, aunque también contenga la palabra "pinturas".
+  const iconosPorPalabraClave: Array<[RegExp, string]> = [
+    // Foco/idea — asesoría.
+    [
+      /asesor/i,
+      'M12 19v2M12 3a6 6 0 0 0-4 10.5c.6.55 1 1.3 1 2.1V17h6v-1.4c0-.8.4-1.55 1-2.1A6 6 0 0 0 12 3Z',
+    ],
+    // Sello/check — distribuidor oficial LANCO.
+    [
+      /lanco|distribuidor/i,
+      'M9 12l2 2 4-4M12 3l2.2 1.6 2.7-.3 1 2.5 2.5 1-.3 2.7L21.7 12l-1.6 2.2.3 2.7-2.5 1-1 2.5-2.7-.3L12 21.7l-2.2-1.6-2.7.3-1-2.5-2.5-1 .3-2.7L2.3 12l1.6-2.2-.3-2.7 2.5-1 1-2.5 2.7.3Z',
+    ],
+    // Gotero/muestra de color — preparación e igualación de color a la medida.
+    [
+      /medida|preparaci[oó]n|igualaci[oó]n/i,
+      'M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z',
+    ],
+    // Rodillo de pintura — proyectos de pintura / equipo de pintores.
+    [
+      /pintura|proyecto|pintor/i,
+      'M3 4h13v6H3V4Zm3 6v4M17 6h2a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2M6 14h1a2 2 0 0 1 2 2v3a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-3a2 2 0 0 1 1-1.7',
+    ],
+  ];
+
+  function iconoParaTitulo(titulo: string): string {
+    const encontrado = iconosPorPalabraClave.find(([patron]) => patron.test(titulo));
+    return encontrado ? encontrado[1] : iconoPorDefecto;
+  }
 
   function tarjetaHtml(s: Servicio, indice: number): string {
     const color = colorPorIndice(indice);
     const icono = s.iconoUrl
       ? `<img src="${escapeHtml(s.iconoUrl)}" alt="" class="h-7 w-7 object-contain" />`
       : `<svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-          <path stroke-linecap="round" stroke-linejoin="round" d="${iconoPorDefecto}" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="${iconoParaTitulo(s.titulo || "")}" />
         </svg>`;
 
     return `
