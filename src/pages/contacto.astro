@@ -3,10 +3,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import SectionKicker from "../components/SectionKicker.astro";
 
 const canales = [
-  { label: "Teléfono", value: "+504 2220-1144", color: "bg-brand-500" },
-  { label: "WhatsApp", value: "+504 9988-7766", color: "bg-menta-500" },
-  { label: "Correo", value: "ventas@supercolorhn.com", color: "bg-cielo-500" },
-  { label: "Horario", value: "Lun–Sáb: 8:00 am – 6:00 pm", color: "bg-mandarina-500" },
+  { label: "Teléfono", value: "+504 2220-1144", color: "bg-brand-500", attr: "telefono" },
+  { label: "WhatsApp", value: "+504 9988-7766", color: "bg-menta-500", attr: "whatsapp" },
+  { label: "Correo", value: "ventas@supercolorhn.com", color: "bg-cielo-500", attr: "correo" },
+  { label: "Horario", value: "Lun–Sáb: 8:00 am – 6:00 pm", color: "bg-mandarina-500", attr: "horario" },
 ];
 ---
 
@@ -89,10 +89,24 @@ const canales = [
             <span class={`h-11 w-11 shrink-0 rounded-full ${c.color}`}></span>
             <div>
               <p class="text-xs font-bold uppercase tracking-wide text-tinta-500">{c.label}</p>
-              <p class="font-display text-lg font-bold text-tinta-900">{c.value}</p>
+              <p class="font-display text-lg font-bold text-tinta-900" data-canal={c.attr}>{c.value}</p>
             </div>
           </div>
         ))}
+
+        <div class="flex items-center gap-4 rounded-2xl border border-tinta-900/5 bg-crema-50 p-5 shadow-sm">
+          <span class="h-11 w-11 shrink-0 rounded-full bg-fiesta-500"></span>
+          <div>
+            <p class="text-xs font-bold uppercase tracking-wide text-tinta-500">Dirección</p>
+            <p class="font-display text-lg font-bold text-tinta-900" data-canal="direccion">Tegucigalpa, Honduras</p>
+          </div>
+        </div>
+
+        <div id="contacto-social" class="hidden items-center gap-3 px-1">
+          <span class="text-xs font-bold uppercase tracking-wide text-tinta-500">Síguenos</span>
+          <a data-social="facebook" href="#" class="hidden h-10 w-10 place-items-center rounded-full bg-tinta-900/5 text-xs font-bold text-tinta-900 transition-colors hover:bg-brand-500 hover:text-crema-50" target="_blank" rel="noopener" aria-label="Facebook">Fa</a>
+          <a data-social="instagram" href="#" class="hidden h-10 w-10 place-items-center rounded-full bg-tinta-900/5 text-xs font-bold text-tinta-900 transition-colors hover:bg-brand-500 hover:text-crema-50" target="_blank" rel="noopener" aria-label="Instagram">In</a>
+        </div>
 
         <div class="rounded-2xl bg-tinta-900 p-6 text-crema-50">
           <h3 class="font-display text-lg font-bold">¿Prefieres visitarnos?</h3>
@@ -108,3 +122,42 @@ const canales = [
     </div>
   </section>
 </BaseLayout>
+
+<script>
+  import { fetchConfiguracion } from "../lib/content";
+
+  (async () => {
+    const { data: config } = await fetchConfiguracion();
+    if (!config) return;
+
+    const setCanal = (attr: string, valor?: string) => {
+      if (!valor || !valor.trim()) return;
+      document.querySelectorAll<HTMLElement>(`[data-canal="${attr}"]`).forEach((el) => {
+        el.textContent = valor.trim();
+      });
+    };
+    setCanal("telefono", config.telefono);
+    setCanal("whatsapp", config.whatsapp);
+    setCanal("correo", config.correo);
+    setCanal("horario", config.horarioAtencion);
+    setCanal("direccion", config.direccionPrincipal);
+
+    const contenedorSocial = document.getElementById("contacto-social");
+    let hayRedes = false;
+    const setEnlaceSocial = (attr: string, url?: string) => {
+      if (!url || !url.trim()) return;
+      document.querySelectorAll<HTMLAnchorElement>(`[data-social="${attr}"]`).forEach((el) => {
+        el.href = url.trim();
+        el.classList.remove("hidden");
+        el.classList.add("grid");
+      });
+      hayRedes = true;
+    };
+    setEnlaceSocial("facebook", config.facebookUrl);
+    setEnlaceSocial("instagram", config.instagramUrl);
+    if (hayRedes && contenedorSocial) {
+      contenedorSocial.classList.remove("hidden");
+      contenedorSocial.classList.add("flex");
+    }
+  })();
+</script>

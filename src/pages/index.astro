@@ -62,7 +62,15 @@ const servicios = [
     <div class="relative mx-auto grid max-w-7xl gap-10 px-5 pb-16 pt-14 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-2 lg:gap-6 lg:pb-28 lg:pt-24">
       <div class="relative z-10 flex flex-col justify-center">
         <SectionKicker text="Tienda de pinturas en Honduras" dot="bg-brand-500" />
-        <h1 class="mt-5 font-display text-4xl font-bold leading-[1.05] text-tinta-900 sm:text-5xl lg:text-6xl">
+        <p
+          id="hero-nombre"
+          class="mt-4 hidden font-display text-sm font-bold uppercase tracking-[0.14em] text-brand-600"
+        >
+        </p>
+        <h1
+          id="hero-eslogan"
+          class="mt-5 font-display text-4xl font-bold leading-[1.05] text-tinta-900 sm:text-5xl lg:text-6xl"
+        >
           El color exacto
           <span class="relative inline-block text-brand-500">
             que imaginaste
@@ -72,7 +80,7 @@ const servicios = [
           </span>
           , sin adivinar.
         </h1>
-        <p class="mt-6 max-w-lg text-lg leading-relaxed text-tinta-500">
+        <p id="hero-descripcion" class="mt-6 max-w-lg text-lg leading-relaxed text-tinta-500">
           En Súper Color igualamos, mezclamos y asesoramos para que cada lata que
           te llevas sea exactamente el tono que tenías en mente. Pinturas de
           aceite, agua, esmaltes y color a medida — todo en un solo lugar.
@@ -200,3 +208,30 @@ const servicios = [
     secondaryHref="/contacto"
   />
 </BaseLayout>
+
+<script>
+  import { fetchConfiguracion } from "../lib/content";
+
+  (async () => {
+    const { data: config } = await fetchConfiguracion();
+    if (!config) return;
+
+    if (config.nombre && config.nombre.trim()) {
+      const elNombre = document.getElementById("hero-nombre");
+      if (elNombre) {
+        elNombre.textContent = `Bienvenido a ${config.nombre.trim()}`;
+        elNombre.classList.remove("hidden");
+      }
+    }
+
+    if (config.eslogan && config.eslogan.trim()) {
+      const elEslogan = document.getElementById("hero-eslogan");
+      if (elEslogan) elEslogan.textContent = config.eslogan.trim();
+    }
+
+    if (config.descripcion && config.descripcion.trim()) {
+      const elDescripcion = document.getElementById("hero-descripcion");
+      if (elDescripcion) elDescripcion.textContent = config.descripcion.trim();
+    }
+  })();
+</script>

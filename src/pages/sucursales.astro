@@ -1,25 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import SectionKicker from "../components/SectionKicker.astro";
-import SucursalCard from "../components/SucursalCard.astro";
 import CTABand from "../components/CTABand.astro";
-
-const sucursales = [
-  {
-    nombre: "Súper Color — Comayagüela Centro",
-    direccion: "Barrio El Centro, 4ta Avenida, frente al Mercado San Isidro, Comayagüela, Tegucigalpa",
-    telefono: "+504 2220-1144",
-    horario: "Lun–Sáb: 8:00 am – 6:00 pm · Dom: 8:00 am – 12:00 pm",
-    gradient: "bg-gradient-to-br from-brand-500 to-brand-700",
-  },
-  {
-    nombre: "Súper Color — Boulevard Suyapa",
-    direccion: "Boulevard Suyapa, contiguo a Farmacia Kielsa, salida hacia la UNAH, Tegucigalpa",
-    telefono: "+504 2235-8890",
-    horario: "Lun–Sáb: 8:00 am – 6:00 pm",
-    gradient: "bg-gradient-to-br from-cielo-500 to-cielo-700",
-  },
-];
 ---
 
 <BaseLayout title="Sucursales" description="Encuentra la sucursal de Súper Color más cercana a ti en Tegucigalpa.">
@@ -38,9 +20,7 @@ const sucursales = [
   </section>
 
   <section class="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
-    <div class="grid gap-6 sm:grid-cols-2">
-      {sucursales.map((s) => <SucursalCard {...s} />)}
-    </div>
+    <div id="sucursales-list" class="grid gap-6 sm:grid-cols-2"></div>
   </section>
 
   <CTABand
@@ -52,3 +32,72 @@ const sucursales = [
     secondaryHref="/contacto"
   />
 </BaseLayout>
+
+<script>
+  import { fetchSucursales, type Sucursal } from "../lib/content";
+  import {
+    degradadoPorIndice,
+    escapeHtml,
+    esqueletoTarjetas,
+    estadoErrorHtml,
+    estadoVacioHtml,
+    flechaSvg,
+  } from "../lib/render-utils";
+
+  const contenedor = document.getElementById("sucursales-list");
+
+  function pinSvg(): string {
+    return `<svg xmlns="http://www.w3.org/2000/svg" class="relative h-14 w-14 text-crema-50 drop-shadow" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 2C7.6 2 4 5.6 4 10c0 6 8 12 8 12s8-6 8-12c0-4.4-3.6-8-8-8Zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z" />
+    </svg>`;
+  }
+
+  function tarjetaHtml(s: Sucursal, indice: number): string {
+    const gradient = degradadoPorIndice(indice);
+    const nombre = s.nombre || "Sucursal Súper Color";
+    const cabecera = s.fotoUrl
+      ? `<img src="${escapeHtml(s.fotoUrl)}" alt="${escapeHtml(nombre)}" class="absolute inset-0 h-full w-full object-cover" />`
+      : `<svg class="absolute inset-0 h-full w-full opacity-20" xmlns="http://www.w3.org/2000/svg">
+          <pattern id="grid-suc-${indice}" width="24" height="24" patternUnits="userSpaceOnUse">
+            <path d="M24 0H0V24" fill="none" stroke="white" stroke-width="1"></path>
+          </pattern>
+          <rect width="100%" height="100%" fill="url(#grid-suc-${indice})"></rect>
+        </svg>
+        ${pinSvg()}`;
+
+    const enlace = s.mapaUrl
+      ? `<a href="${escapeHtml(s.mapaUrl)}" target="_blank" rel="noopener" class="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-brand-600 hover:text-brand-700">Cómo llegar ${flechaSvg()}</a>`
+      : `<a href="/contacto" class="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-brand-600 hover:text-brand-700">Cómo llegar ${flechaSvg()}</a>`;
+
+    return `
+      <article class="overflow-hidden rounded-3xl border border-tinta-900/5 bg-crema-50 shadow-sm">
+        <div class="relative flex h-44 items-center justify-center overflow-hidden ${gradient}">
+          ${cabecera}
+        </div>
+        <div class="p-7">
+          <h3 class="font-display text-xl font-bold text-tinta-900">${escapeHtml(nombre)}</h3>
+          <ul class="mt-4 space-y-2.5 text-sm text-tinta-700">
+            <li class="flex gap-2.5"><span class="font-bold text-brand-500">Dirección</span> ${escapeHtml(s.direccion || "—")}</li>
+            <li class="flex gap-2.5"><span class="font-bold text-brand-500">Teléfono</span> ${escapeHtml(s.telefono || "—")}</li>
+            <li class="flex gap-2.5"><span class="font-bold text-brand-500">Horario</span> ${escapeHtml(s.horario || "—")}</li>
+          </ul>
+          ${enlace}
+        </div>
+      </article>`;
+  }
+
+  (async () => {
+    if (!contenedor) return;
+    contenedor.innerHTML = esqueletoTarjetas(2, "h-72");
+    const { data, error } = await fetchSucursales();
+    if (error) {
+      contenedor.innerHTML = estadoErrorHtml();
+      return;
+    }
+    if (data.length === 0) {
+      contenedor.innerHTML = estadoVacioHtml("Pronto vas a ver aquí nuestras sucursales.");
+      return;
+    }
+    contenedor.innerHTML = data.map((s, i) => tarjetaHtml(s, i)).join("");
+  })();
+</script>

@@ -1,59 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import SectionKicker from "../components/SectionKicker.astro";
-import PromoCard from "../components/PromoCard.astro";
 import CTABand from "../components/CTABand.astro";
-
-const promos = [
-  {
-    badge: "Temporada",
-    title: "20% en pinturas de agua",
-    description: "Aplica en toda la línea de pinturas de agua para interiores, en ambas sucursales.",
-    detail: "Válido durante agosto",
-    gradient: "bg-gradient-to-br from-menta-400 to-menta-600",
-    tilt: "left" as const,
-  },
-  {
-    badge: "Combo",
-    title: "Igualación + galón gratis",
-    description: "Al igualar un color nuevo, tu primer galón en base de agua sale sin costo.",
-    detail: "Solo en sucursal Comayagüela",
-    gradient: "bg-gradient-to-br from-brand-400 to-brand-600",
-    tilt: "none" as const,
-  },
-  {
-    badge: "Fidelidad",
-    title: "5ta lata con descuento",
-    description: "Acumula compras en tu cuenta de cliente frecuente y la quinta lata tiene 30% off.",
-    detail: "Pregunta en caja",
-    gradient: "bg-gradient-to-br from-cielo-400 to-cielo-600",
-    tilt: "right" as const,
-  },
-  {
-    badge: "Lluvia",
-    title: "Impermeabilizante 2x1",
-    description: "Lleva dos cubetas de impermeabilizante y paga solo una durante la temporada lluviosa.",
-    detail: "Mientras dure el inventario",
-    gradient: "bg-gradient-to-br from-mandarina-400 to-mandarina-600",
-    tilt: "left" as const,
-  },
-  {
-    badge: "Estudiantes",
-    title: "15% en accesorios",
-    description: "Brochas, rodillos y cinta con descuento para proyectos escolares, presentando carnet.",
-    detail: "Todo el año",
-    gradient: "bg-gradient-to-br from-sol-400 to-sol-600",
-    tilt: "none" as const,
-  },
-  {
-    badge: "Referidos",
-    title: "L.100 en tu próxima compra",
-    description: "Por cada amigo que refieras y compre, ambos reciben un crédito para su siguiente visita.",
-    detail: "Acumulable",
-    gradient: "bg-gradient-to-br from-fiesta-400 to-fiesta-600",
-    tilt: "right" as const,
-  },
-];
 ---
 
 <BaseLayout title="Promociones" description="Ofertas y descuentos vigentes en Súper Color.">
@@ -73,13 +21,7 @@ const promos = [
   </section>
 
   <section class="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20">
-    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {promos.map((p) => <PromoCard {...p} />)}
-    </div>
-    <p class="mt-10 text-center text-xs text-tinta-500">
-      * Contenido de muestra. Precios, porcentajes y vigencias son ilustrativos
-      y serán reemplazados por las promociones reales de la tienda.
-    </p>
+    <div id="promociones-list" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"></div>
   </section>
 
   <CTABand
@@ -91,3 +33,66 @@ const promos = [
     secondaryHref="/contacto"
   />
 </BaseLayout>
+
+<script>
+  import { aFecha, fetchPromocionesVigentes, type PromocionSitio } from "../lib/content";
+  import {
+    degradadoPorIndice,
+    escapeHtml,
+    esqueletoTarjetas,
+    estadoErrorHtml,
+    estadoVacioHtml,
+  } from "../lib/render-utils";
+
+  const contenedor = document.getElementById("promociones-list");
+  const rotaciones = ["sm:-rotate-1", "", "sm:rotate-1"];
+  const formateador = new Intl.DateTimeFormat("es-HN", { day: "numeric", month: "long" });
+
+  function detalleVigencia(p: PromocionSitio): string {
+    const fin = aFecha(p.fechaFin);
+    if (fin) return `Válido hasta ${formateador.format(fin)}`;
+    const inicio = aFecha(p.fechaInicio);
+    if (inicio) return `Vigente desde ${formateador.format(inicio)}`;
+    return "Promoción vigente";
+  }
+
+  function tarjetaHtml(p: PromocionSitio, indice: number): string {
+    const gradient = degradadoPorIndice(indice);
+    const rotacion = rotaciones[indice % rotaciones.length];
+    const imagen = p.imagenUrl
+      ? `<img src="${escapeHtml(p.imagenUrl)}" alt="" class="absolute inset-0 h-full w-full object-cover opacity-30" />`
+      : "";
+
+    return `
+      <article class="group relative overflow-hidden rounded-[2rem] border border-tinta-900/5 bg-crema-50 shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-xl ${rotacion}">
+        <div class="relative flex items-center justify-between px-6 py-5 ${gradient}">
+          ${imagen}
+          <span class="relative rounded-full bg-crema-50/95 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide text-tinta-900">Promoción</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="relative h-8 w-8 text-crema-50/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L4 3l.24 5.59a2 2 0 0 0 .58 1.41l9.59 9.59a2 2 0 0 0 2.83 0l3.34-3.34a2 2 0 0 0 0-2.83Z" />
+            <circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none" />
+          </svg>
+        </div>
+        <div class="p-6">
+          <h3 class="font-display text-xl font-bold text-tinta-900">${escapeHtml(p.titulo || "Promoción Súper Color")}</h3>
+          <p class="mt-2 text-sm leading-relaxed text-tinta-500">${escapeHtml(p.descripcion || "")}</p>
+          <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-brand-600">${escapeHtml(detalleVigencia(p))}</p>
+        </div>
+      </article>`;
+  }
+
+  (async () => {
+    if (!contenedor) return;
+    contenedor.innerHTML = esqueletoTarjetas(3, "h-64");
+    const { data, error } = await fetchPromocionesVigentes();
+    if (error) {
+      contenedor.innerHTML = estadoErrorHtml();
+      return;
+    }
+    if (data.length === 0) {
+      contenedor.innerHTML = estadoVacioHtml("No hay promociones activas en este momento.");
+      return;
+    }
+    contenedor.innerHTML = data.map((p, i) => tarjetaHtml(p, i)).join("");
+  })();
+</script>

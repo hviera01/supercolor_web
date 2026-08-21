@@ -9,7 +9,7 @@ const textColor = variant === "light" ? "text-crema-50" : "text-tinta-900";
 ---
 
 <a href="/" class={`group inline-flex items-center gap-2.5 ${className}`}>
-  <span class="relative grid h-10 w-10 shrink-0 place-items-center">
+  <span class="relative grid h-10 w-10 shrink-0 place-items-center" data-brand-icon-slot>
     <svg viewBox="0 0 64 64" class="h-10 w-10 drop-shadow-sm transition-transform group-hover:-rotate-6">
       <path
         d="M32 4c9 12 18 22 18 33a18 18 0 1 1-36 0C14 26 23 16 32 4Z"
@@ -27,7 +27,7 @@ const textColor = variant === "light" ? "text-crema-50" : "text-tinta-900";
     <span class="absolute -bottom-0.5 left-6 h-2 w-2 rounded-full bg-cielo-500"></span>
   </span>
   <span class="leading-tight">
-    <span class={`block font-display text-xl font-bold tracking-tight ${textColor}`}>
+    <span class={`block font-display text-xl font-bold tracking-tight ${textColor}`} data-brand-name>
       Súper <span class="text-brand-500">Color</span>
     </span>
     {showTagline && (

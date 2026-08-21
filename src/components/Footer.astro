@@ -47,11 +47,16 @@ const linkCols = [
         ayudando a hondureños a encontrar el color exacto que tienen en mente.
       </p>
       <div class="mt-5 flex gap-3">
-        {["Facebook", "Instagram", "WhatsApp"].map((label) => (
+        {[
+          { label: "Facebook", attr: "facebook" },
+          { label: "Instagram", attr: "instagram" },
+          { label: "WhatsApp", attr: "whatsapp" },
+        ].map(({ label, attr }) => (
           <a
             href="#"
+            data-social={attr}
             aria-label={label}
-            class="grid h-10 w-10 place-items-center rounded-full bg-crema-100/10 text-xs font-bold text-crema-100 transition-colors hover:bg-brand-500"
+            class="hidden h-10 w-10 place-items-center rounded-full bg-crema-100/10 text-xs font-bold text-crema-100 transition-colors hover:bg-brand-500"
           >
             {label.slice(0, 2)}
           </a>
@@ -79,9 +84,9 @@ const linkCols = [
         Contacto directo
       </h3>
       <ul class="mt-4 space-y-2.5 text-sm text-crema-100/80">
-        <li>Tegucigalpa, Honduras</li>
-        <li>+504 2234-5678</li>
-        <li>ventas@supercolorhn.com</li>
+        <li data-footer-direccion>Tegucigalpa, Honduras</li>
+        <li data-footer-telefono>+504 2234-5678</li>
+        <li data-footer-correo>ventas@supercolorhn.com</li>
         <li>Lun–Sáb: 8:00 am – 6:00 pm</li>
       </ul>
     </div>

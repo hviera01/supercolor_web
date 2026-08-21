@@ -1,50 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import SectionKicker from "../components/SectionKicker.astro";
-import ProductCard from "../components/ProductCard.astro";
 import CTABand from "../components/CTABand.astro";
-
-const productos = [
-  {
-    name: "Pinturas de aceite",
-    description: "Acabado resistente y brillante para madera y metal, interior o exterior. Ideal para puertas, muebles y estructuras expuestas al clima.",
-    color: "bg-brand-500",
-    gradient: "bg-gradient-to-br from-brand-500 to-brand-700",
-    tag: "Más vendida",
-  },
-  {
-    name: "Esmaltes",
-    description: "Protección duradera contra el óxido y el desgaste diario en superficies metálicas, portones, verjas y láminas.",
-    color: "bg-cielo-500",
-    gradient: "bg-gradient-to-br from-cielo-400 to-cielo-600",
-  },
-  {
-    name: "Pinturas de agua",
-    description: "Bajo olor, secado rápido y fácil limpieza. La opción favorita para paredes interiores de casa y oficina.",
-    color: "bg-menta-500",
-    gradient: "bg-gradient-to-br from-menta-400 to-menta-600",
-  },
-  {
-    name: "Colores personalizados",
-    description: "Igualamos cualquier muestra que traigas —tela, foto o pedazo de pared— con nuestro sistema de mezcla computarizado.",
-    color: "bg-fiesta-500",
-    gradient: "bg-gradient-to-br from-fiesta-400 to-fiesta-600",
-    tag: "A tu medida",
-  },
-  {
-    name: "Impermeabilizantes",
-    description: "Sella techos y paredes contra la lluvia y la humedad, con garantía de larga duración en temporada lluviosa.",
-    color: "bg-mandarina-500",
-    gradient: "bg-gradient-to-br from-mandarina-400 to-mandarina-600",
-    tag: "Temporada",
-  },
-  {
-    name: "Accesorios",
-    description: "Brochas, rodillos, cinta de enmascarar, lijas y todo lo necesario para dejar tu proyecto con acabado profesional.",
-    color: "bg-sol-500",
-    gradient: "bg-gradient-to-br from-sol-400 to-sol-600",
-  },
-];
 ---
 
 <BaseLayout title="Productos" description="Catálogo de pinturas, esmaltes, impermeabilizantes y accesorios de Súper Color.">
@@ -63,9 +20,7 @@ const productos = [
   </section>
 
   <section class="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
-    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {productos.map((p) => <ProductCard {...p} />)}
-    </div>
+    <div id="productos-list" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"></div>
   </section>
 
   <CTABand
@@ -77,3 +32,72 @@ const productos = [
     secondaryHref="/contacto"
   />
 </BaseLayout>
+
+<script>
+  import { fetchProductosDestacados, type ProductoDestacado } from "../lib/content";
+  import {
+    colorPorIndice,
+    degradadoPorIndice,
+    escapeHtml,
+    esqueletoTarjetas,
+    estadoErrorHtml,
+    estadoVacioHtml,
+  } from "../lib/render-utils";
+
+  const contenedor = document.getElementById("productos-list");
+
+  function paintCanHtml(color: string): string {
+    return `
+      <div class="relative w-28 shrink-0 translate-y-6 transition-transform group-hover:-translate-y-1 group-hover:rotate-3">
+        <div class="mx-auto h-4 w-[88px] rounded-t-md rounded-b-sm bg-tinta-700"></div>
+        <div class="mx-auto -mt-0.5 h-2 w-24 rounded-sm bg-tinta-900/80"></div>
+        <div class="relative mx-auto h-28 w-24 overflow-hidden rounded-b-2xl border border-tinta-900/10 bg-crema-50 shadow-[0_10px_20px_-8px_rgba(26,26,26,0.35)]">
+          <div class="absolute inset-x-0 top-1/3 h-[38%] ${color}"></div>
+          <div class="absolute inset-x-0 top-1/3 h-px bg-tinta-900/10"></div>
+          <div class="absolute inset-x-0 top-[calc(1/3*100%+38%)] h-px bg-tinta-900/10"></div>
+          <div class="absolute right-2 top-2 h-8 w-3 rounded-full bg-white/40 blur-[1px]"></div>
+        </div>
+        <div class="mx-auto -mt-1 h-3 w-3 rounded-full ${color} opacity-80"></div>
+      </div>`;
+  }
+
+  function tarjetaHtml(p: ProductoDestacado, indice: number): string {
+    const gradient = degradadoPorIndice(indice);
+    const nombre = p.nombre || "Producto Súper Color";
+    const etiqueta = p.categoria
+      ? `<span class="absolute left-4 top-4 rounded-full bg-crema-50/95 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-tinta-900">${escapeHtml(p.categoria)}</span>`
+      : "";
+    const cabecera = p.imagenUrl
+      ? `<img src="${escapeHtml(p.imagenUrl)}" alt="${escapeHtml(nombre)}" class="absolute inset-0 h-full w-full object-cover" />`
+      : `<div class="absolute -left-6 -top-6 h-24 w-24 rounded-full bg-white/10"></div>
+         <div class="absolute -right-4 top-8 h-14 w-14 rounded-full bg-white/10"></div>
+         ${paintCanHtml(colorPorIndice(indice))}`;
+
+    return `
+      <article class="group blob-corner overflow-hidden border border-tinta-900/5 bg-crema-50 shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-xl">
+        <div class="relative flex h-40 items-end justify-center overflow-hidden ${gradient} pt-6">
+          ${etiqueta}
+          ${cabecera}
+        </div>
+        <div class="p-6">
+          <h3 class="font-display text-xl font-bold text-tinta-900">${escapeHtml(nombre)}</h3>
+          <p class="mt-2 text-sm leading-relaxed text-tinta-500">${escapeHtml(p.descripcion || "")}</p>
+        </div>
+      </article>`;
+  }
+
+  (async () => {
+    if (!contenedor) return;
+    contenedor.innerHTML = esqueletoTarjetas(3, "h-64");
+    const { data, error } = await fetchProductosDestacados();
+    if (error) {
+      contenedor.innerHTML = estadoErrorHtml();
+      return;
+    }
+    if (data.length === 0) {
+      contenedor.innerHTML = estadoVacioHtml("Pronto vas a ver aquí nuestro catálogo destacado.");
+      return;
+    }
+    contenedor.innerHTML = data.map((p, i) => tarjetaHtml(p, i)).join("");
+  })();
+</script>

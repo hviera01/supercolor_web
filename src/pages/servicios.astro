@@ -1,35 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import SectionKicker from "../components/SectionKicker.astro";
-import ServiceCard from "../components/ServiceCard.astro";
 import CTABand from "../components/CTABand.astro";
-
-const servicios = [
-  {
-    title: "Igualación de color",
-    description: "Trae una muestra —tela, foto, pedazo de pared o un objeto— y la igualamos con precisión usando nuestro sistema de mezcla computarizado.",
-    color: "bg-brand-500",
-    icon: "swatch" as const,
-  },
-  {
-    title: "Mezcla a medida",
-    description: "Preparamos el tono exacto que necesitas, en la cantidad exacta que necesitas: desde un cuarto de galón hasta cubetas industriales.",
-    color: "bg-mandarina-500",
-    icon: "mix" as const,
-  },
-  {
-    title: "Asesoría de color",
-    description: "¿No sabes qué tono elegir? Nuestro equipo te ayuda a combinar colores según el ambiente, la luz natural y el estilo que buscas.",
-    color: "bg-cielo-500",
-    icon: "advice" as const,
-  },
-  {
-    title: "Entrega a domicilio",
-    description: "Hacemos tu pedido y te lo llevamos a la puerta de tu casa o proyecto dentro del área metropolitana, en el mismo día.",
-    color: "bg-menta-500",
-    icon: "truck" as const,
-  },
-];
 
 const pasos = [
   { n: "1", title: "Trae tu muestra", text: "Una tela, una foto, un pedazo de pared o simplemente cuéntanos la idea." },
@@ -56,9 +28,7 @@ const pasos = [
   </section>
 
   <section class="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20">
-    <div class="grid gap-6 sm:grid-cols-2">
-      {servicios.map((s) => <ServiceCard {...s} />)}
-    </div>
+    <div id="servicios-list" class="grid gap-6 sm:grid-cols-2"></div>
   </section>
 
   <!-- COMO FUNCIONA -->
@@ -95,3 +65,54 @@ const pasos = [
     secondaryHref="/contacto"
   />
 </BaseLayout>
+
+<script>
+  import { fetchServicios, type Servicio } from "../lib/content";
+  import {
+    colorPorIndice,
+    escapeHtml,
+    esqueletoTarjetas,
+    estadoErrorHtml,
+    estadoVacioHtml,
+  } from "../lib/render-utils";
+
+  const contenedor = document.getElementById("servicios-list");
+
+  const iconoPorDefecto =
+    'M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z';
+
+  function tarjetaHtml(s: Servicio, indice: number): string {
+    const color = colorPorIndice(indice);
+    const icono = s.iconoUrl
+      ? `<img src="${escapeHtml(s.iconoUrl)}" alt="" class="h-7 w-7 object-contain" />`
+      : `<svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="${iconoPorDefecto}" />
+        </svg>`;
+
+    return `
+      <article class="blob-corner-alt flex flex-col gap-5 border border-tinta-900/5 bg-crema-50 p-7 shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-xl sm:flex-row sm:items-start">
+        <div class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${color} text-crema-50">
+          ${icono}
+        </div>
+        <div>
+          <h3 class="font-display text-lg font-bold text-tinta-900">${escapeHtml(s.titulo || "Servicio Súper Color")}</h3>
+          <p class="mt-2 text-sm leading-relaxed text-tinta-500">${escapeHtml(s.descripcion || "")}</p>
+        </div>
+      </article>`;
+  }
+
+  (async () => {
+    if (!contenedor) return;
+    contenedor.innerHTML = esqueletoTarjetas(2, "h-40");
+    const { data, error } = await fetchServicios();
+    if (error) {
+      contenedor.innerHTML = estadoErrorHtml();
+      return;
+    }
+    if (data.length === 0) {
+      contenedor.innerHTML = estadoVacioHtml("Pronto vas a ver aquí nuestros servicios.");
+      return;
+    }
+    contenedor.innerHTML = data.map((s, i) => tarjetaHtml(s, i)).join("");
+  })();
+</script>
