@@ -26,12 +26,6 @@ const valores = [
   },
 ];
 
-const hitos = [
-  { year: "Hace más de 20 años", text: "Abrimos nuestro primer local en Danlí vendiendo pinturas de aceite." },
-  { year: "Después", text: "Incorporamos la preparación de color a la medida, mezclado a mano por nuestro equipo hasta que el tono queda exacto." },
-  { year: "Más adelante", text: "Nos convertimos en distribuidores oficiales de LANCO y armamos nuestro propio equipo de pintores para proyectos completos." },
-  { year: "Hoy", text: "Seguimos siendo un negocio familiar en Danlí, con el mismo compromiso de encontrar tu color exacto." },
-];
 ---
 
 <BaseLayout title="Nosotros" description="Conoce la historia, los valores y el equipo detrás de Súper Color.">
@@ -55,22 +49,28 @@ const hitos = [
     </div>
   </section>
 
-  <!-- HISTORIA / TIMELINE -->
-  <section class="mx-auto max-w-5xl px-5 py-16 sm:px-8 sm:py-20">
-    <SectionKicker text="Cómo llegamos aquí" dot="bg-brand-500" />
-    <h2 class="mt-4 font-display text-3xl font-bold text-tinta-900 sm:text-4xl">Nuestro recorrido</h2>
+  <!-- RESEÑA HISTORICA -->
+  <section class="mx-auto max-w-4xl px-5 py-16 sm:px-8 sm:py-20">
+    <SectionKicker text="Nuestra trayectoria" dot="bg-brand-500" />
+    <h2 class="mt-4 font-display text-3xl font-bold text-tinta-900 sm:text-4xl">Más de 20 años preparando color</h2>
 
-    <ol class="mt-12 space-y-10 border-l-4 border-dashed border-brand-200 pl-8">
-      {hitos.map((h, i) => (
-        <li class="relative">
-          <span class="absolute -left-[2.65rem] grid h-8 w-8 place-items-center rounded-full bg-brand-500 font-display text-xs font-bold text-crema-50">
-            {i + 1}
-          </span>
-          <p class="font-display text-lg font-bold text-brand-600">{h.year}</p>
-          <p class="mt-1 max-w-xl text-tinta-500">{h.text}</p>
-        </li>
-      ))}
-    </ol>
+    <div class="mt-8 space-y-5 text-lg leading-relaxed text-tinta-600">
+      <p>
+        Súper Color tiene más de 20 años de experiencia en la preparación de
+        colores en Danlí. En todo ese tiempo hemos ido creciendo junto con
+        nuestros clientes, sumando la preparación de color a la medida
+        —mezclado a mano por nuestro equipo hasta que el tono queda exacto,
+        ya sea a partir de una muestra o de una foto— además de las líneas de
+        pintura de catálogo que manejamos desde siempre.
+      </p>
+      <p>
+        Con el tiempo nos convertimos en distribuidores oficiales de LANCO y
+        armamos nuestro propio equipo de pintores, para acompañar no solo la
+        venta de pintura sino también proyectos de pintura completos. Hoy
+        seguimos siendo el mismo negocio familiar de siempre, con el mismo
+        compromiso de ayudarte a encontrar tu color exacto.
+      </p>
+    </div>
   </section>
 
   <!-- VALORES -->
