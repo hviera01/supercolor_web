@@ -63,16 +63,46 @@ const servicios = [
     <div class="pointer-events-none absolute -bottom-10 right-1/3 hidden h-24 w-24 rounded-full bg-menta-500/60 lg:block"></div>
 
     <!-- Fondo con color solo en móvil (en desktop ya lo da la franja diagonal de arriba) -->
-    <div class="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-gradient-to-br from-sol-200/70 via-crema-100 to-cielo-200/50 lg:hidden"></div>
-    <div class="pointer-events-none absolute -right-10 top-6 h-32 w-32 rounded-full bg-brand-500/15 blur-2xl lg:hidden"></div>
-    <div class="pointer-events-none absolute left-4 top-52 h-24 w-24 rounded-full bg-fiesta-500/15 blur-2xl lg:hidden"></div>
+    <div class="absolute inset-x-0 top-0 h-[400px] overflow-hidden lg:hidden">
+      <div class="absolute inset-0 bg-gradient-to-br from-sol-300 via-mandarina-300 to-brand-200"></div>
+      <div class="pointer-events-none float-slow absolute -right-10 -top-10 h-40 w-40 rounded-full bg-sol-400/60 blur-2xl"></div>
+      <div class="pointer-events-none float-slow-delay absolute -left-12 top-36 h-32 w-32 rounded-full bg-cielo-500/40 blur-2xl"></div>
+      <div class="pointer-events-none float-slow absolute left-1/3 top-2 h-16 w-16 rounded-full bg-crema-50/50 blur-xl"></div>
+      <div class="pointer-events-none float-slow-delay absolute bottom-4 right-8 h-20 w-20 rounded-full bg-fiesta-500/30 blur-xl"></div>
+    </div>
 
-    <div class="relative mx-auto grid max-w-7xl gap-10 px-5 pb-16 pt-14 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-2 lg:gap-6 lg:pb-28 lg:pt-24">
+    <div class="relative mx-auto grid max-w-7xl gap-10 px-5 pb-16 pt-8 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-2 lg:gap-6 lg:pb-28 lg:pt-24">
       <div class="relative z-10 flex flex-col justify-center">
         <SectionKicker text="Tienda de pinturas en Honduras" dot="bg-brand-500" />
+
+        <!-- Fotos reales de accesorios: solo en móvil, arriba de todo para que se vean sin hacer scroll -->
+        <div class="relative z-10 -mx-1 mt-5 flex items-center justify-center gap-3 lg:hidden">
+          <div class="-rotate-6 rounded-2xl bg-crema-50 p-2.5 shadow-lg ring-1 ring-tinta-900/5">
+            <img
+              src="https://res.cloudinary.com/jzlwbtwt/image/upload/v1787326629/e37ae1bqk6dpsbzkhejv.png"
+              alt="Felpa para pintar"
+              class="h-16 w-16 object-contain sm:h-20 sm:w-20"
+            />
+          </div>
+          <div class="-translate-y-2 rotate-3 rounded-2xl bg-crema-50 p-2.5 shadow-lg ring-1 ring-tinta-900/5">
+            <img
+              src="https://res.cloudinary.com/jzlwbtwt/image/upload/v1787326630/yfqu6ytp3yfxdjcnbqxs.jpg"
+              alt="Brocha para pintar"
+              class="h-20 w-12 object-contain sm:h-24 sm:w-14"
+            />
+          </div>
+          <div class="rotate-6 rounded-2xl bg-crema-50 p-2.5 shadow-lg ring-1 ring-tinta-900/5">
+            <img
+              src="https://res.cloudinary.com/jzlwbtwt/image/upload/v1787326632/ulci4mz6p84kdu5q6wzw.jpg"
+              alt="Brocha para pintar"
+              class="h-20 w-12 object-contain sm:h-24 sm:w-14"
+            />
+          </div>
+        </div>
+
         <p
           id="hero-nombre"
-          class="mt-4 hidden font-display text-sm font-bold uppercase tracking-[0.14em] text-brand-600"
+          class="mt-5 hidden font-display text-sm font-bold uppercase tracking-[0.14em] text-brand-600"
         >
         </p>
         <h1
@@ -129,31 +159,6 @@ const servicios = [
         <PaintCan color="bg-sol-500" label="Interior" tilt="left" class="mb-6" />
         <PaintCan color="bg-brand-500" label="Exterior" tilt="none" class="scale-110" />
         <PaintCan color="bg-cielo-500" label="A tu medida" tilt="right" class="mb-10" />
-      </div>
-
-      <!-- Fotos reales de accesorios: solo en móvil, le dan vida al fondo plano -->
-      <div class="relative z-10 flex items-center justify-center gap-3 pt-2 lg:hidden">
-        <div class="-rotate-6 rounded-2xl bg-crema-50 p-2.5 shadow-lg ring-1 ring-tinta-900/5">
-          <img
-            src="https://res.cloudinary.com/jzlwbtwt/image/upload/v1787326629/e37ae1bqk6dpsbzkhejv.png"
-            alt="Felpa para pintar"
-            class="h-20 w-20 object-contain sm:h-24 sm:w-24"
-          />
-        </div>
-        <div class="-translate-y-3 rotate-3 rounded-2xl bg-crema-50 p-2.5 shadow-lg ring-1 ring-tinta-900/5">
-          <img
-            src="https://res.cloudinary.com/jzlwbtwt/image/upload/v1787326630/yfqu6ytp3yfxdjcnbqxs.jpg"
-            alt="Brocha para pintar"
-            class="h-24 w-14 object-contain sm:h-28 sm:w-16"
-          />
-        </div>
-        <div class="rotate-6 rounded-2xl bg-crema-50 p-2.5 shadow-lg ring-1 ring-tinta-900/5">
-          <img
-            src="https://res.cloudinary.com/jzlwbtwt/image/upload/v1787326632/ulci4mz6p84kdu5q6wzw.jpg"
-            alt="Brocha para pintar"
-            class="h-24 w-14 object-contain sm:h-28 sm:w-16"
-          />
-        </div>
       </div>
     </div>
   </section>
@@ -225,10 +230,9 @@ const servicios = [
       }
     }
 
-    if (config.eslogan && config.eslogan.trim()) {
-      const elEslogan = document.getElementById("hero-eslogan");
-      if (elEslogan) elEslogan.textContent = config.eslogan.trim();
-    }
+    // El eslogan real (p. ej. "LA DECISIÓN CORRECTA") ya se muestra en el logo
+    // del menú — el título grande del hero se queda siempre con su frase de
+    // marca a color, que es más vistosa que reemplazarla por texto plano.
 
     if (config.descripcion && config.descripcion.trim()) {
       const elDescripcion = document.getElementById("hero-descripcion");

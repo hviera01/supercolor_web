@@ -92,4 +92,23 @@
     background-size: 10px 6px;
     background-repeat: repeat-x;
   }
+
+  /* Manchas de color con vida propia: flotan despacio en vez de quedarse
+     estáticas, para que un fondo de color no se sienta plano. */
+  .float-slow {
+    animation: float-slow 7s ease-in-out infinite;
+  }
+  .float-slow-delay {
+    animation: float-slow 8s ease-in-out infinite;
+    animation-delay: -3s;
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(10px, -14px) scale(1.08);
+  }
 }
