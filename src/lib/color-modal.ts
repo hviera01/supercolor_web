@@ -1,11 +1,14 @@
-// Modal de detalle de un color del abanico -mismo patrón visual que
-// product-modal.ts (vanilla JS/CSS, sin dependencias), contenido distinto:
-// el swatch grande, código/nombre, y las ideas de combinación reales.
+// Modal de detalle de un color -mismo patrón visual que product-modal.ts
+// (vanilla JS/CSS, sin dependencias). El detalle es simple (swatch, código,
+// nombre) más un botón que lleva al combinador de la misma página con este
+// color ya elegido -las ideas de combinación viven en una sola herramienta
+// central (ver colores.astro), no repetidas dentro del modal.
 import { escapeHtml } from "./render-utils";
-import { ideasCombinacion, type ColorPaleta } from "./color-aproximado";
+import type { ColorEnriquecido } from "./color-lanco";
 
 let modalEl: HTMLDivElement | null = null;
 let disparadorAnterior: HTMLElement | null = null;
+let onCombinar: ((color: ColorEnriquecido) => void) | null = null;
 
 function crearModal(): HTMLDivElement {
   const el = document.createElement("div");
@@ -17,7 +20,7 @@ function crearModal(): HTMLDivElement {
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-color-titulo"
-      class="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-crema-50 shadow-2xl"
+      class="relative z-10 w-full max-w-md overflow-hidden rounded-3xl bg-crema-50 shadow-2xl"
     >
       <button
         type="button"
@@ -29,15 +32,20 @@ function crearModal(): HTMLDivElement {
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18" />
         </svg>
       </button>
-      <div data-modal-swatch class="relative flex h-40 items-end overflow-hidden p-6 sm:h-48"></div>
+      <div data-modal-swatch class="h-36"></div>
       <div class="p-7">
-        <span data-modal-base class="rounded-full bg-brand-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-brand-600"></span>
-        <h3 id="modal-color-titulo" data-modal-nombre class="mt-3 font-display text-2xl font-bold text-tinta-900"></h3>
+        <h3 id="modal-color-titulo" data-modal-nombre class="font-display text-2xl font-bold text-tinta-900"></h3>
         <p data-modal-codigo class="mt-1 font-mono text-sm text-tinta-500"></p>
         <p class="mt-4 rounded-2xl bg-sol-300/25 px-4 py-3 text-xs leading-relaxed text-tinta-700">
-          El color real en la pared puede variar de esto -es un cálculo aproximado a partir de la fórmula de tinte, no un escaneo oficial, y además cada pantalla lo muestra distinto. Para el color exacto, mira el abanico físico en la tienda.
+          El color en pantalla puede variar un poco del color real -confirmalo con el abanico físico en tienda.
         </p>
-        <div data-modal-ideas class="mt-6 space-y-3"></div>
+        <button
+          type="button"
+          data-modal-combinar
+          class="mt-5 w-full rounded-2xl bg-brand-500 py-3.5 text-sm font-bold text-crema-50 shadow-sm transition-transform hover:-translate-y-0.5 hover:bg-brand-600"
+        >
+          Ver ideas para combinarlo
+        </button>
       </div>
     </div>`;
   document.body.appendChild(el);
@@ -52,28 +60,23 @@ function crearModal(): HTMLDivElement {
   return el;
 }
 
-function ideaHtml(idea: { color: ColorPaleta; titulo: string; descripcion: string }): string {
-  return `
-    <div class="flex items-start gap-3 rounded-2xl border border-tinta-900/5 bg-crema-100 p-3">
-      <span class="mt-0.5 h-10 w-10 shrink-0 rounded-xl border border-tinta-900/10" style="background:${idea.color.hex}"></span>
-      <div>
-        <p class="text-xs font-bold uppercase tracking-wide text-brand-600">${escapeHtml(idea.titulo)}</p>
-        <p class="mt-1 text-sm leading-relaxed text-tinta-700">${escapeHtml(idea.descripcion)}</p>
-      </div>
-    </div>`;
-}
+let colorActual: ColorEnriquecido | null = null;
 
-export function abrirModalColor(color: ColorPaleta, paleta: ColorPaleta[], disparador?: HTMLElement): void {
+export function abrirModalColor(color: ColorEnriquecido, alCombinar: (color: ColorEnriquecido) => void, disparador?: HTMLElement): void {
   if (!modalEl) modalEl = crearModal();
   disparadorAnterior = disparador ?? (document.activeElement as HTMLElement | null) ?? null;
+  colorActual = color;
+  onCombinar = alCombinar;
 
   (modalEl.querySelector("[data-modal-swatch]") as HTMLElement).style.background = color.hex;
-  (modalEl.querySelector("[data-modal-base]") as HTMLElement).textContent = color.formula.base;
-  (modalEl.querySelector("[data-modal-nombre]") as HTMLElement).textContent = color.formula.nombre;
-  (modalEl.querySelector("[data-modal-codigo]") as HTMLElement).textContent = color.formula.codigo;
+  (modalEl.querySelector("[data-modal-nombre]") as HTMLElement).textContent = color.nombre;
+  (modalEl.querySelector("[data-modal-codigo]") as HTMLElement).textContent = color.codigo;
 
-  const ideas = ideasCombinacion(color, paleta);
-  (modalEl.querySelector("[data-modal-ideas]") as HTMLElement).innerHTML = ideas.map(ideaHtml).join("");
+  const botonCombinar = modalEl.querySelector("[data-modal-combinar]") as HTMLElement;
+  botonCombinar.onclick = () => {
+    if (colorActual && onCombinar) onCombinar(colorActual);
+    cerrarModalColor();
+  };
 
   modalEl.classList.remove("hidden");
   modalEl.classList.add("flex");
