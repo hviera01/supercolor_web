@@ -1,0 +1,310 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SectionKicker from "../components/SectionKicker.astro";
+import CTABand from "../components/CTABand.astro";
+---
+
+<BaseLayout
+  title="Abanico de colores"
+  description="Explora digitalmente el abanico de colores LANCO -código, nombre e ideas de combinación- y calculá cuánta pintura necesitás para tu proyecto."
+>
+  <section class="relative overflow-hidden">
+    <div class="absolute inset-x-0 top-0 h-64 bg-gradient-to-br from-crema-200 to-crema-100"></div>
+    <div class="relative mx-auto max-w-4xl px-5 pb-6 pt-16 text-center sm:px-8 sm:pt-20">
+      <SectionKicker text="Abanico digital" dot="bg-brand-500" />
+      <h1 class="mt-6 font-display text-4xl font-bold text-tinta-900 sm:text-5xl">
+        Todos los colores LANCO, buscables desde tu casa
+      </h1>
+      <p class="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-tinta-500">
+        Buscá por código o nombre, mirá ideas de combinación, y calculá cuánta
+        pintura necesitás. El color exacto siempre lo confirmamos con el
+        abanico físico en tienda.
+      </p>
+      <p class="mx-auto mt-6 max-w-2xl rounded-2xl border border-sol-500/40 bg-sol-300/20 px-5 py-4 text-sm leading-relaxed text-tinta-700">
+        <strong class="font-bold">Los colores de esta página son una aproximación</strong>,
+        no un valor oficial de LANCO: se calculan a partir de la fórmula de
+        tinte de cada color. En físico pueden variar -tanto por esa
+        aproximación como porque cada pantalla los muestra distinto-, así
+        que usalos como referencia para explorar, no para elegir el color
+        final.
+      </p>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-7xl px-5 py-10 sm:px-8">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div class="relative flex-1">
+        <svg xmlns="http://www.w3.org/2000/svg" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-tinta-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+        </svg>
+        <input
+          id="colores-buscar"
+          type="text"
+          placeholder="Buscá por código o nombre (ej. OW3-1, Dove White)"
+          class="w-full rounded-2xl border border-tinta-900/10 bg-crema-50 py-3.5 pl-12 pr-4 text-sm text-tinta-900 placeholder:text-tinta-500 focus:border-brand-500 focus:outline-none"
+        />
+      </div>
+      <select
+        id="colores-base"
+        class="rounded-2xl border border-tinta-900/10 bg-crema-50 py-3.5 px-4 text-sm text-tinta-900 focus:border-brand-500 focus:outline-none sm:w-56"
+      >
+        <option value="">Todas las bases</option>
+        <option value="Pastel Base">Pastel Base</option>
+        <option value="Tint Base">Tint Base</option>
+        <option value="Deep Base">Deep Base</option>
+        <option value="Accent Base">Accent Base</option>
+      </select>
+    </div>
+    <p id="colores-contador" class="mt-3 text-xs text-tinta-500"></p>
+
+    <div id="colores-list" class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"></div>
+
+    <div class="mt-8 flex justify-center">
+      <button
+        id="colores-mas"
+        type="button"
+        class="hidden rounded-full border border-tinta-900/10 bg-crema-50 px-6 py-3 text-sm font-bold text-tinta-900 shadow-sm transition-colors hover:bg-crema-200"
+      >
+        Mostrar más colores
+      </button>
+    </div>
+  </section>
+
+  <!-- CALCULADORA DE RENDIMIENTO -->
+  <section class="bg-crema-200/60 py-16 sm:py-20">
+    <div class="mx-auto max-w-3xl px-5 sm:px-8">
+      <SectionKicker text="Calculadora" dot="bg-cielo-500" />
+      <h2 class="mt-4 font-display text-3xl font-bold text-tinta-900 sm:text-4xl">
+        ¿Cuánta pintura necesito?
+      </h2>
+      <p class="mt-4 text-tinta-600">
+        Un estimado según el área a pintar y el tipo de producto -pedí
+        confirmación en tienda para proyectos grandes.
+      </p>
+
+      <div class="mt-8 blob-corner border border-tinta-900/5 bg-crema-50 p-7 shadow-sm">
+        <div class="flex flex-wrap gap-2">
+          <button type="button" data-modo-area="dimensiones" class="rendimiento-modo-btn rounded-full px-4 py-2 text-sm font-semibold">Ancho × Alto</button>
+          <button type="button" data-modo-area="lineal" class="rendimiento-modo-btn rounded-full px-4 py-2 text-sm font-semibold">Metros lineales</button>
+          <button type="button" data-modo-area="m2" class="rendimiento-modo-btn rounded-full px-4 py-2 text-sm font-semibold">Metros cuadrados</button>
+        </div>
+
+        <div class="mt-6 grid gap-4 sm:grid-cols-2">
+          <div data-campo-area="dimensiones" class="contents">
+            <label class="block text-sm">
+              <span class="font-semibold text-tinta-700">Ancho (m)</span>
+              <input type="number" min="0" step="0.1" id="rendimiento-ancho" class="mt-1.5 w-full rounded-xl border border-tinta-900/10 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:outline-none" />
+            </label>
+            <label class="block text-sm">
+              <span class="font-semibold text-tinta-700">Alto (m)</span>
+              <input type="number" min="0" step="0.1" id="rendimiento-alto" class="mt-1.5 w-full rounded-xl border border-tinta-900/10 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:outline-none" />
+            </label>
+          </div>
+          <div data-campo-area="lineal" class="contents hidden">
+            <label class="block text-sm">
+              <span class="font-semibold text-tinta-700">Metros lineales</span>
+              <input type="number" min="0" step="0.1" id="rendimiento-lineal" class="mt-1.5 w-full rounded-xl border border-tinta-900/10 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:outline-none" />
+            </label>
+            <label class="block text-sm">
+              <span class="font-semibold text-tinta-700">Altura (m)</span>
+              <input type="number" min="0" step="0.1" id="rendimiento-altura-lineal" class="mt-1.5 w-full rounded-xl border border-tinta-900/10 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:outline-none" />
+            </label>
+          </div>
+          <div data-campo-area="m2" class="contents hidden">
+            <label class="block text-sm sm:col-span-2">
+              <span class="font-semibold text-tinta-700">Área (m²)</span>
+              <input type="number" min="0" step="0.1" id="rendimiento-m2" class="mt-1.5 w-full rounded-xl border border-tinta-900/10 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:outline-none" />
+            </label>
+          </div>
+
+          <label class="block text-sm">
+            <span class="font-semibold text-tinta-700">Tipo de producto</span>
+            <select id="rendimiento-tipo" class="mt-1.5 w-full rounded-xl border border-tinta-900/10 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:outline-none"></select>
+          </label>
+          <label class="block text-sm">
+            <span class="font-semibold text-tinta-700">Número de manos</span>
+            <input type="number" min="1" step="1" value="2" id="rendimiento-manos" class="mt-1.5 w-full rounded-xl border border-tinta-900/10 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:outline-none" />
+          </label>
+        </div>
+
+        <button
+          id="rendimiento-calcular"
+          type="button"
+          class="mt-6 w-full rounded-2xl bg-brand-500 py-3.5 text-sm font-bold text-crema-50 shadow-sm transition-transform hover:-translate-y-0.5 hover:bg-brand-600 sm:w-auto sm:px-8"
+        >
+          Calcular
+        </button>
+
+        <div id="rendimiento-resultado" class="mt-6 hidden rounded-2xl bg-menta-300/15 px-5 py-4 text-sm leading-relaxed text-menta-700"></div>
+        <p class="mt-3 text-xs text-tinta-500">
+          Rendimiento estimado por tipo de producto -no por producto exacto-,
+          basado en referencias de LANCO donde existen y en cifras típicas de
+          la industria donde no. Puede variar según la superficie y la
+          técnica de aplicación.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <CTABand
+    title="¿Ya elegiste tu color?"
+    subtitle="Traé el código o mostranos la pantalla, y lo preparamos frente a ti."
+    primaryLabel="Escríbenos por WhatsApp"
+    primaryHref="/contacto"
+    primaryWhatsapp
+    primaryWhatsappMensaje="Hola, quiero pedir un color del abanico"
+    secondaryLabel="Ver ubicación"
+    secondaryHref="/ubicacion"
+  />
+</BaseLayout>
+
+<style>
+  .rendimiento-modo-btn {
+    color: var(--color-tinta-700);
+    background: var(--color-crema-100);
+  }
+  .rendimiento-modo-btn[data-activo="true"] {
+    background: var(--color-brand-500);
+    color: var(--color-crema-50);
+  }
+</style>
+
+<script>
+  import datosFormulas from "../data/formulas_colortrend.json";
+  import { calcularPaleta, type ColorPaleta, type FormulaColor } from "../lib/color-aproximado";
+  import { abrirModalColor } from "../lib/color-modal";
+  import { escapeHtml } from "../lib/render-utils";
+  import {
+    areaDesdeAnchoAlto,
+    areaDesdeLineal,
+    calcularPintura,
+    TIPOS_PRODUCTO,
+    type TipoProducto,
+  } from "../lib/rendimiento";
+
+  // ---------- Abanico de colores ----------
+  const paleta: ColorPaleta[] = calcularPaleta(datosFormulas as FormulaColor[]);
+
+  const lista = document.getElementById("colores-list") as HTMLElement;
+  const contador = document.getElementById("colores-contador") as HTMLElement;
+  const inputBuscar = document.getElementById("colores-buscar") as HTMLInputElement;
+  const selectBase = document.getElementById("colores-base") as HTMLSelectElement;
+  const botonMas = document.getElementById("colores-mas") as HTMLButtonElement;
+
+  const TAMANO_PAGINA = 40;
+  let filtrados: ColorPaleta[] = paleta;
+  let mostrados = TAMANO_PAGINA;
+
+  function normalizar(texto: string): string {
+    return texto
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "");
+  }
+
+  function swatchHtml(c: ColorPaleta, indice: number): string {
+    return `
+      <button
+        type="button"
+        data-indice="${indice}"
+        class="group blob-corner overflow-hidden border border-tinta-900/5 bg-crema-50 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+      >
+        <div class="h-20 w-full" style="background:${c.hex}"></div>
+        <div class="p-3">
+          <p class="truncate text-xs font-bold text-tinta-900">${escapeHtml(c.formula.nombre)}</p>
+          <p class="mt-0.5 font-mono text-[11px] text-tinta-500">${escapeHtml(c.formula.codigo)}</p>
+        </div>
+      </button>`;
+  }
+
+  function repintar(): void {
+    const visibles = filtrados.slice(0, mostrados);
+    lista.innerHTML = visibles.map((c, i) => swatchHtml(c, i)).join("");
+    contador.textContent = `${filtrados.length} colores${filtrados.length !== paleta.length ? ` de ${paleta.length}` : ""}`;
+    botonMas.classList.toggle("hidden", mostrados >= filtrados.length);
+  }
+
+  function aplicarFiltro(): void {
+    const texto = normalizar(inputBuscar.value.trim());
+    const base = selectBase.value;
+    filtrados = paleta.filter((c) => {
+      if (base && c.formula.base !== base) return false;
+      if (!texto) return true;
+      return normalizar(c.formula.codigo).includes(texto) || normalizar(c.formula.nombre).includes(texto);
+    });
+    mostrados = TAMANO_PAGINA;
+    repintar();
+  }
+
+  let debounce: ReturnType<typeof setTimeout> | undefined;
+  inputBuscar.addEventListener("input", () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(aplicarFiltro, 150);
+  });
+  selectBase.addEventListener("change", aplicarFiltro);
+  botonMas.addEventListener("click", () => {
+    mostrados += TAMANO_PAGINA;
+    repintar();
+  });
+
+  lista.addEventListener("click", (e) => {
+    const boton = (e.target as HTMLElement).closest("button[data-indice]") as HTMLButtonElement | null;
+    if (!boton) return;
+    const color = filtrados[Number(boton.dataset.indice)];
+    if (!color) return;
+    abrirModalColor(color, paleta, boton);
+  });
+
+  repintar();
+
+  // ---------- Calculadora de rendimiento ----------
+  const selectTipo = document.getElementById("rendimiento-tipo") as HTMLSelectElement;
+  selectTipo.innerHTML = TIPOS_PRODUCTO.map((t) => `<option value="${t.valor}">${escapeHtml(t.etiqueta)}</option>`).join("");
+
+  let modoArea: "dimensiones" | "lineal" | "m2" = "dimensiones";
+  const botonesModo = document.querySelectorAll<HTMLButtonElement>("[data-modo-area]");
+  const camposModo = document.querySelectorAll<HTMLElement>("[data-campo-area]");
+
+  function actualizarModo(): void {
+    botonesModo.forEach((b) => b.setAttribute("data-activo", String(b.dataset.modoArea === modoArea)));
+    camposModo.forEach((c) => c.classList.toggle("hidden", c.dataset.campoArea !== modoArea));
+  }
+  botonesModo.forEach((b) =>
+    b.addEventListener("click", () => {
+      modoArea = b.dataset.modoArea as typeof modoArea;
+      actualizarModo();
+    }),
+  );
+  actualizarModo();
+
+  const numero = (id: string): number => Number((document.getElementById(id) as HTMLInputElement).value) || 0;
+
+  document.getElementById("rendimiento-calcular")?.addEventListener("click", () => {
+    let areaM2 = 0;
+    if (modoArea === "dimensiones") areaM2 = areaDesdeAnchoAlto(numero("rendimiento-ancho"), numero("rendimiento-alto"));
+    else if (modoArea === "lineal") areaM2 = areaDesdeLineal(numero("rendimiento-lineal"), numero("rendimiento-altura-lineal"));
+    else areaM2 = numero("rendimiento-m2");
+
+    const resultadoEl = document.getElementById("rendimiento-resultado") as HTMLElement;
+    if (areaM2 <= 0) {
+      resultadoEl.classList.remove("hidden");
+      resultadoEl.className = "mt-6 rounded-2xl bg-mandarina-50 px-5 py-4 text-sm leading-relaxed text-mandarina-600";
+      resultadoEl.textContent = "Ingresá un área mayor a cero para calcular.";
+      return;
+    }
+
+    const tipo = selectTipo.value as TipoProducto;
+    const manos = Math.max(1, numero("rendimiento-manos"));
+    const resultado = calcularPintura(areaM2, tipo, manos);
+    const partes: string[] = [];
+    if (resultado.compra.cubetas > 0) partes.push(`${resultado.compra.cubetas} cubeta${resultado.compra.cubetas > 1 ? "s" : ""} (5 gal)`);
+    if (resultado.compra.galones > 0) partes.push(`${resultado.compra.galones} galón${resultado.compra.galones > 1 ? "es" : ""}`);
+    if (resultado.compra.cuartos > 0) partes.push(`${resultado.compra.cuartos} cuarto${resultado.compra.cuartos > 1 ? "s" : ""}`);
+
+    resultadoEl.classList.remove("hidden");
+    resultadoEl.className = "mt-6 rounded-2xl bg-menta-300/15 px-5 py-4 text-sm leading-relaxed text-menta-700";
+    resultadoEl.innerHTML = `
+      <p class="font-bold">Área: ${resultado.areaM2.toFixed(2)} m² · Necesitás aprox. ${resultado.galonesNecesarios.toFixed(2)} galones</p>
+      <p class="mt-1">Sugerencia de compra: ${partes.length ? partes.join(" + ") : "menos de un cuarto"}</p>`;
+  });
+</script>
