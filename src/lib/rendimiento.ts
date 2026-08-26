@@ -1,12 +1,16 @@
 // Calculadora de cuánta pintura hace falta según el área a pintar. El
-// rendimiento (m² por galón) es un ESTIMADO por tipo de producto -pedido
-// explícito del dueño: sin cargar nada a mano por producto exacto-. Donde
-// encontré una ficha técnica real de LANCO se usa ese dato (látex general
-// ~40 m²/galón, e impermeabilizante Dry Coat: ~37 m²/galón como pintura o
-// ~9.5 m²/galón como sellador, mucho más grueso); donde no encontré ficha
-// exacta (aceite, piscina, sellador/base) se usa una cifra típica de la
-// industria para ese tipo de producto. Mismo espíritu que la aproximación
-// de color: razonable, no exacto.
+// rendimiento (m² por galón, PARA UNA SOLA MANO) es un ESTIMADO por tipo de
+// producto -pedido explícito del dueño: sin cargar nada a mano por producto
+// exacto-. látex, sellador/base y aceite salen de un dato real que dio el
+// dueño (consultó directo con el pintor que hace los proyectos, no es una
+// ficha técnica): látex (mate y satinada cubren igual) y sellador/base
+// rinden ~18 m²/cubeta (5 gal) A DOS MANOS -18/5=3.6 m²/galón a dos manos,
+// ×2 = 7.2 m²/galón por mano-; aceite rinde ~15 m²/galón A DOS MANOS -×2 =
+// 30 m²/galón por mano-. Para el resto (impermeabilizante, piscina) donde sí
+// encontré ficha técnica real de LANCO o no hay dato del dueño, se deja
+// igual: impermeabilizante Dry Coat ~37 m²/galón como pintura o ~9.5
+// m²/galón como sellador (mucho más grueso), piscina una cifra típica de la
+// industria.
 
 export type TipoProducto =
   | "latex"
@@ -26,12 +30,12 @@ export const TIPOS_PRODUCTO: { valor: TipoProducto; etiqueta: string }[] = [
 ];
 
 const RENDIMIENTO_M2_POR_GALON: Record<TipoProducto, number> = {
-  latex: 40,
-  aceite: 32,
+  latex: 7.2,
+  aceite: 30,
   impermeabilizante_pintura: 37,
   impermeabilizante_sellador: 9.5,
   piscina: 22,
-  sellador_base: 35,
+  sellador_base: 7.2,
 };
 
 export interface CompraSugerida {
