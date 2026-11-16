@@ -6,52 +6,152 @@ import CTABand from "../components/CTABand.astro";
 
 <BaseLayout
   title="Abanico de colores"
-  description="Explora digitalmente el abanico de colores LANCO -código, nombre y color real- agrupados por familia, con un combinador de ideas y una calculadora de rendimiento."
+  description="Explora el abanico de colores LANCO en forma de paleta -código, nombre y color real-, aparta tus favoritos y combínalos antes de venir a la tienda."
 >
-  <section class="relative overflow-hidden">
-    <div class="absolute inset-x-0 top-0 h-64 bg-gradient-to-br from-crema-200 to-crema-100"></div>
-    <div class="relative mx-auto max-w-4xl px-5 pb-6 pt-16 text-center sm:px-8 sm:pt-20">
+  <section class="hero-colores relative overflow-hidden">
+    <div class="absolute inset-x-0 top-0 h-48 bg-gradient-to-br from-crema-200 to-crema-100"></div>
+    <div class="hero-colores-dentro relative mx-auto max-w-4xl px-5 pb-3 pt-6 text-center sm:px-8 sm:pb-5 sm:pt-14">
       <SectionKicker text="Abanico digital" dot="bg-brand-500" />
-      <h1 class="mt-6 font-display text-4xl font-bold text-tinta-900 sm:text-5xl">
-        Todos los colores LANCO, agrupados y buscables
+      <h1 class="mt-3 font-display text-2xl font-bold text-tinta-900 sm:mt-4 sm:text-5xl">
+        Elegí tu color LANCO
       </h1>
-      <p class="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-tinta-500">
-        Buscá por código o nombre, mirá los colores agrupados por familia, y
-        usá el combinador para armar ideas antes de venir a la tienda.
+      <p class="mx-auto mt-3 hidden max-w-2xl text-base leading-relaxed text-tinta-500 sm:block sm:text-lg">
+        Pasá las páginas del abanico, tocá un color para verlo en grande y
+        apartá los que te gusten -al final los mandás por WhatsApp o los traés
+        a tienda.
       </p>
-      <p class="mx-auto mt-6 max-w-2xl rounded-2xl border border-sol-500/40 bg-sol-300/20 px-5 py-4 text-sm leading-relaxed text-tinta-700">
-        El color en tu pantalla puede variar un poco del color real de la
-        pintura -cada pantalla lo muestra distinto-. Usalo para explorar y
-        elegir opciones, y confirmá el tono final con el abanico físico en
-        tienda.
-      </p>
+      <a href="#foto-color" class="mt-3 inline-flex items-center gap-1.5 rounded-full border border-tinta-900/10 bg-crema-50 px-4 py-1.5 text-xs font-bold text-tinta-700 transition-colors hover:border-brand-500 hover:text-brand-600 sm:mt-5 sm:text-sm">
+        ¿Tenés una foto? Buscá el color desde ahí
+      </a>
     </div>
   </section>
 
-  <section class="mx-auto max-w-7xl px-5 py-10 sm:px-8">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <div class="relative flex-1">
-        <svg xmlns="http://www.w3.org/2000/svg" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-tinta-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
-        </svg>
-        <input
-          id="colores-buscar"
-          type="text"
-          placeholder="Buscá por código o nombre (ej. OW3-1, Dove White)"
-          class="w-full rounded-2xl border border-tinta-900/10 bg-crema-50 py-3.5 pl-12 pr-4 text-sm text-tinta-900 placeholder:text-tinta-500 focus:border-brand-500 focus:outline-none"
-        />
+  <!-- BARRA DE HERRAMIENTAS (se queda arriba al bajar por la paleta) -->
+  <div id="colores-barra" class="border-y border-tinta-900/10 bg-crema-100">
+    <div class="mx-auto max-w-7xl px-5 py-3 sm:px-8">
+      <div class="flex items-center gap-2 sm:gap-3">
+        <div class="relative flex-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-tinta-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+          </svg>
+          <input
+            id="colores-buscar"
+            type="search"
+            placeholder="Buscá por código o nombre"
+            class="w-full rounded-2xl border border-tinta-900/10 bg-crema-50 py-3 pl-12 pr-4 text-sm text-tinta-900 placeholder:text-tinta-500 focus:border-brand-500 focus:outline-none"
+            autocomplete="off"
+          />
+          <div id="colores-sugerencias" class="absolute left-0 right-0 top-full z-40 mt-1 hidden max-h-72 overflow-y-auto rounded-2xl border border-tinta-900/10 bg-white shadow-lg"></div>
+        </div>
+        <div class="inline-flex shrink-0 rounded-2xl border border-tinta-900/10 bg-crema-50 p-1" role="group" aria-label="Tipo de vista">
+          <button type="button" data-vista="abanico" aria-label="Vista de abanico" class="vista-btn flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold sm:px-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h5v16H4zM10.5 3h5v17h-5zM17 5h3.5v15H17z"/></svg>
+            <span class="hidden sm:inline">Abanico</span>
+          </button>
+          <button type="button" data-vista="familias" aria-label="Vista por familias" class="vista-btn flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold sm:px-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M3 4h18v3H3zM3 10.5h12v3H3zM3 17h18v3H3z"/></svg>
+            <span class="hidden sm:inline">Por familias</span>
+          </button>
+        </div>
       </div>
-      <select
-        id="colores-familia"
-        class="rounded-2xl border border-tinta-900/10 bg-crema-50 py-3.5 px-4 text-sm text-tinta-900 focus:border-brand-500 focus:outline-none sm:w-64"
-      >
-        <option value="">Todas las familias</option>
-      </select>
-    </div>
-    <p id="colores-contador" class="mt-3 text-xs text-tinta-500"></p>
 
-    <div id="colores-secciones" class="mt-6 space-y-10"></div>
+      <div id="colores-chips" class="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:px-0 xl:flex-wrap xl:overflow-visible" role="group" aria-label="Filtrar por familia"></div>
+      <p id="colores-contador" class="mt-2 text-xs text-tinta-500"></p>
+    </div>
+  </div>
+
+  <section class="mx-auto max-w-7xl px-5 pb-28 pt-5 sm:px-8">
+    <!-- ABANICO: una tira de colores por página -->
+    <div id="vista-abanico">
+      <div id="abanico-escenario" class="abanico-escenario">
+        <button id="abanico-ant" type="button" data-nav="ant" aria-label="Página anterior" class="abanico-flecha abanico-flecha-izq">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7" /></svg>
+        </button>
+        <div id="abanico-cartas" class="abanico-cartas"></div>
+        <div class="abanico-nav">
+          <button type="button" data-nav="ant" aria-label="Página anterior">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7" /></svg>
+            Anterior
+          </button>
+          <button type="button" data-nav="sig" aria-label="Página siguiente">
+            Siguiente
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+        <button id="abanico-sig" type="button" data-nav="sig" aria-label="Página siguiente" class="abanico-flecha abanico-flecha-der">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+        </button>
+      </div>
+
+      <div class="mx-auto mt-6 max-w-2xl">
+        <p class="text-center text-sm font-semibold text-tinta-700">
+          Página <span id="abanico-pagina-actual">1</span> de <span id="abanico-pagina-total">1</span>
+        </p>
+        <div id="abanico-espectro" class="abanico-espectro" role="slider" tabindex="0" aria-label="Saltar a otra página del abanico" aria-valuemin="1" aria-valuenow="1" aria-valuemax="1">
+          <div id="abanico-barra" class="abanico-barra"></div>
+          <div id="abanico-manija" class="abanico-manija"></div>
+        </div>
+        <p class="mt-3 text-center text-xs text-tinta-500">
+          Deslizá la tira, usá los botones Anterior y Siguiente, o tocá la barra de colores para saltar rápido.
+        </p>
+      </div>
+    </div>
+
+    <!-- POR FAMILIAS -->
+    <div id="vista-familias" class="hidden">
+      <div id="colores-secciones" class="space-y-10"></div>
+      <p id="colores-vacio" class="hidden rounded-2xl bg-crema-200 px-5 py-8 text-center text-sm text-tinta-600">
+        No encontramos colores con esa búsqueda. Probá con otro nombre o código.
+      </p>
+    </div>
+
+    <p class="mx-auto mt-10 max-w-2xl rounded-2xl border border-sol-500/40 bg-sol-300/20 px-5 py-4 text-sm leading-relaxed text-tinta-700">
+      El color en tu pantalla puede variar un poco del color real de la pintura
+      -cada pantalla lo muestra distinto-. Usalo para explorar y elegir
+      opciones, y confirmá el tono final con el abanico físico en tienda.
+    </p>
   </section>
+
+  <!-- BARRA DE COLORES APARTADOS -->
+  <div id="apartados-barra" class="pointer-events-none fixed inset-x-0 bottom-0 z-40 hidden justify-center px-3 pb-3 sm:px-6 sm:pb-5">
+    <button
+      id="apartados-abrir"
+      type="button"
+      class="pointer-events-auto flex w-full max-w-xl items-center gap-3 rounded-2xl bg-tinta-900 py-2.5 pl-3 pr-4 text-left text-crema-50 shadow-2xl transition-transform hover:-translate-y-0.5"
+    >
+      <span id="apartados-muestras" class="flex -space-x-2"></span>
+      <span class="flex-1 text-sm font-bold"><span id="apartados-cuenta"></span></span>
+      <span class="rounded-xl bg-brand-500 px-3.5 py-2 text-xs font-bold">Ver mi selección</span>
+    </button>
+  </div>
+
+  <!-- PANEL DE COLORES APARTADOS -->
+  <div id="apartados-panel" class="fixed inset-0 z-[55] hidden items-end justify-center sm:items-center sm:p-6">
+    <div id="apartados-fondo" class="absolute inset-0 bg-tinta-900/70 backdrop-blur-sm"></div>
+    <div role="dialog" aria-modal="true" aria-labelledby="apartados-titulo" class="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl bg-crema-50 shadow-2xl sm:rounded-3xl">
+      <div class="flex items-start justify-between gap-3 border-b border-tinta-900/10 px-5 py-4 sm:px-6">
+        <div>
+          <h2 id="apartados-titulo" class="font-display text-2xl font-bold text-tinta-900">Mi selección</h2>
+          <p class="text-xs text-tinta-500">Se guarda en este dispositivo para que sigas luego.</p>
+        </div>
+        <button id="apartados-cerrar" type="button" aria-label="Cerrar mi selección" class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-crema-200 text-tinta-900 transition-colors hover:bg-crema-300">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </div>
+      <div id="apartados-lista" class="grid flex-1 grid-cols-2 gap-3 overflow-y-auto p-5 sm:grid-cols-3 sm:p-6"></div>
+      <div class="flex flex-col gap-2 border-t border-tinta-900/10 bg-crema-100 px-5 py-4 sm:flex-row sm:items-center sm:px-6">
+        <a id="apartados-whatsapp" href="/contacto" class="flex flex-1 items-center justify-center rounded-2xl bg-menta-500 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-menta-600">
+          Enviar por WhatsApp
+        </a>
+        <button id="apartados-copiar" type="button" class="rounded-2xl border border-tinta-900/15 bg-crema-50 px-5 py-3 text-sm font-bold text-tinta-700 transition-colors hover:bg-crema-200">
+          Copiar códigos
+        </button>
+        <button id="apartados-vaciar" type="button" class="rounded-2xl px-4 py-3 text-sm font-bold text-brand-600 transition-colors hover:bg-brand-50">
+          Vaciar
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- COMBINADOR -->
   <section id="combinador" class="bg-crema-200/60 py-16 sm:py-20">
@@ -106,6 +206,71 @@ import CTABand from "../components/CTABand.astro";
         </button>
 
         <div id="combinador-resultado" class="mt-6 hidden grid-cols-2 gap-3 sm:grid-cols-3"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COLORES DESDE UNA FOTO -->
+  <section id="foto-color" class="py-16 sm:py-20">
+    <div class="mx-auto max-w-3xl px-5 sm:px-8">
+      <SectionKicker text="Desde tu foto" dot="bg-menta-500" />
+      <h2 class="mt-4 font-display text-3xl font-bold text-tinta-900 sm:text-4xl">
+        ¿Qué color es el de esa pared?
+      </h2>
+      <p class="mt-4 text-tinta-600">
+        Subí la foto de un cuarto o de una casa pintada, tocá la pared que te
+        gusta y te mostramos los colores del abanico que más se le parecen,
+        con su código para que los busques.
+      </p>
+
+      <div class="mt-8 blob-corner border border-tinta-900/5 bg-crema-50 p-5 shadow-sm sm:p-7">
+        <label
+          id="foto-zona"
+          for="foto-archivo"
+          class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-tinta-900/15 bg-crema-100 px-6 py-10 text-center transition-colors hover:border-brand-500 hover:bg-crema-200"
+        >
+          <svg class="h-9 w-9 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 8a2 2 0 0 1 2-2h1.5l1.2-1.6A1 1 0 0 1 9.5 4h5a1 1 0 0 1 .8.4L16.5 6H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+            <circle cx="12" cy="12.5" r="3.5" />
+          </svg>
+          <span class="text-sm font-bold text-tinta-900">Tocá para elegir una foto</span>
+          <span class="text-xs text-tinta-500">También podés sacar una con la cámara</span>
+        </label>
+        <input id="foto-archivo" type="file" accept="image/*" class="sr-only" />
+        <p id="foto-error" class="mt-3 hidden rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-700"></p>
+
+        <div id="foto-visor" class="hidden">
+          <div class="relative overflow-hidden rounded-2xl bg-tinta-900/5">
+            <canvas id="foto-canvas" class="block w-full cursor-crosshair" style="touch-action: manipulation" aria-label="Tu foto: tocá la pared que querés igualar"></canvas>
+          </div>
+          <p class="mt-2 text-xs text-tinta-500">Tocá la pared o lo que querés igualar. En computadora también podés arrastrar.</p>
+
+          <div id="foto-dominantes-caja" class="mt-5 hidden">
+            <p class="text-xs font-bold uppercase tracking-wide text-tinta-500">Colores que vemos en tu foto</p>
+            <div id="foto-dominantes" class="mt-2 flex flex-wrap gap-2"></div>
+          </div>
+
+          <div id="foto-objetivo" class="mt-5 flex items-center gap-3 rounded-xl bg-crema-100 p-3"></div>
+
+          <label class="mt-5 block text-sm">
+            <span class="font-semibold text-tinta-700">La luz de tu foto</span>
+            <input id="foto-luz" type="range" min="-20" max="20" step="1" value="0" class="mt-2 w-full accent-brand-500" />
+            <span class="mt-1 flex justify-between text-xs text-tinta-500"><span>Salió muy oscura</span><span>Salió muy clara</span></span>
+          </label>
+
+          <h3 class="mt-7 font-display text-xl font-bold text-tinta-900">Los más parecidos del abanico</h3>
+          <div id="foto-resultado" class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4"></div>
+
+          <p class="mt-5 text-xs leading-relaxed text-tinta-500">
+            Es una guía: la luz y la cámara cambian los colores de una foto.
+            Antes de comprar, confirmá el color con el abanico físico en la tienda.
+          </p>
+          <button id="foto-otra" type="button" class="mt-4 rounded-2xl border border-tinta-900/15 bg-crema-50 px-5 py-2.5 text-sm font-bold text-tinta-700 transition-colors hover:bg-crema-200">
+            Probar con otra foto
+          </button>
+        </div>
+
+        <p class="mt-5 text-xs text-tinta-500">Tu foto no se sube a ningún lado: se analiza dentro de tu teléfono o computadora.</p>
       </div>
     </div>
   </section>
@@ -209,10 +374,396 @@ import CTABand from "../components/CTABand.astro";
   }
 </style>
 
+<style is:global>
+  .vista-btn {
+    color: var(--color-tinta-700);
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .vista-btn[aria-pressed="true"] {
+    background: var(--color-tinta-900);
+    color: var(--color-crema-50);
+  }
+  .chip-familia {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 9999px;
+    border: 1px solid rgb(26 26 26 / 0.12);
+    background: var(--color-crema-50);
+    padding: 0.4rem 0.8rem 0.4rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-tinta-700);
+    white-space: nowrap;
+    transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .chip-familia:first-child {
+    padding-left: 0.8rem;
+  }
+  .chip-familia i {
+    display: block;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    border: 1px solid rgb(26 26 26 / 0.15);
+  }
+  .chip-familia:hover {
+    border-color: var(--color-tinta-700);
+  }
+  .chip-familia[aria-pressed="true"] {
+    background: var(--color-tinta-900);
+    border-color: var(--color-tinta-900);
+    color: var(--color-crema-50);
+  }
+
+  /* ---------- Corazón de "apartar" ---------- */
+  .paleta-celda {
+    position: relative;
+  }
+  .corazon-btn {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.3rem;
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    background: rgb(255 255 255 / 0.85);
+    color: var(--color-tinta-700);
+    box-shadow: 0 1px 4px rgb(26 26 26 / 0.25);
+    transition: opacity 0.12s, background-color 0.12s, color 0.12s, transform 0.12s;
+  }
+  .corazon-btn svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  .corazon-btn:hover {
+    transform: scale(1.12);
+  }
+  .corazon-btn[aria-pressed="true"] {
+    background: var(--color-brand-500);
+    color: #fff;
+    opacity: 1 !important;
+  }
+  @media (hover: hover) {
+    .paleta-celda .corazon-btn:not([aria-pressed="true"]) {
+      opacity: 0;
+    }
+    .paleta-celda:hover .corazon-btn,
+    .paleta-celda:focus-within .corazon-btn {
+      opacity: 1;
+    }
+  }
+
+  .familia-tarjeta {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    border: 1px solid rgb(26 26 26 / 0.06);
+    background: var(--color-crema-50);
+    box-shadow: 0 1px 2px rgb(26 26 26 / 0.06);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .familia-tarjeta:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 22px rgb(26 26 26 / 0.15);
+  }
+
+  /* ---------- Abanico: una tira por página (carrusel nativo con imán) ---------- */
+  header.sticky {
+    position: static;
+  }
+  @media (orientation: landscape) and (max-height: 900px) {
+    .hero-colores p {
+      display: none;
+    }
+    .hero-colores .hero-colores-dentro {
+      padding-top: 1rem;
+      padding-bottom: 0.5rem;
+    }
+    .hero-colores h1 {
+      font-size: 1.6rem;
+    }
+  }
+  .abanico-escenario {
+    position: relative;
+    height: clamp(400px, calc(100svh - 150px), 780px);
+  }
+  .abanico-cartas {
+    --ancho: min(86vw, 400px);
+    position: relative;
+    display: flex;
+    gap: 14px;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 14px calc(50% - var(--ancho) / 2) 28px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .abanico-cartas::-webkit-scrollbar {
+    display: none;
+  }
+  .abanico-slide {
+    position: relative;
+    flex: 0 0 var(--ancho);
+    height: 100%;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+  }
+  .abanico-carta {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 2rem;
+    background: var(--color-crema-50);
+    box-shadow: 0 8px 20px rgb(26 26 26 / 0.2);
+    transform-origin: 50% 100%;
+  }
+
+  .abanico-nav {
+    position: absolute;
+    left: 50%;
+    bottom: 32px;
+    z-index: 20;
+    display: flex;
+    gap: 0.5rem;
+    transform: translateX(-50%);
+  }
+  .abanico-nav button {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 2.4rem;
+    border-radius: 9999px;
+    background: var(--color-tinta-900);
+    padding: 0.45rem 0.85rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-crema-50);
+    box-shadow: 0 3px 8px rgb(26 26 26 / 0.35);
+    transition: background-color 0.12s, opacity 0.12s, transform 0.12s;
+  }
+  .abanico-nav button:active {
+    transform: scale(0.95);
+    background: var(--color-brand-600);
+  }
+  .abanico-nav button:disabled {
+    opacity: 0.3;
+  }
+
+  .franja-lista {
+    display: flex;
+    flex: 1 1 0;
+    min-height: 0;
+    flex-direction: column;
+  }
+  .franja-color {
+    position: relative;
+    display: flex;
+    flex: 1 1 0;
+    min-height: 0;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0 1.3rem 0 3.6rem;
+    text-align: right;
+    border-bottom: 3px solid var(--color-crema-50);
+    transition: flex-grow 0.34s cubic-bezier(0.22, 0.8, 0.24, 1);
+  }
+  .franja-color:last-child {
+    border-bottom: 0;
+  }
+  .franja-color[data-abierto="true"] {
+    flex-grow: 4.2;
+    justify-content: flex-end;
+    padding-bottom: 1rem;
+  }
+  .franja-abrir {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    cursor: pointer;
+  }
+  .franja-abrir:focus-visible {
+    outline: 3px solid var(--color-brand-500);
+    outline-offset: -3px;
+  }
+  .franja-texto {
+    position: relative;
+    pointer-events: none;
+    line-height: 1.15;
+  }
+  .franja-codigo {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+  }
+  .franja-nombre {
+    font-size: 0.92rem;
+    font-weight: 600;
+    opacity: 0.9;
+  }
+  .franja-color[data-abierto="true"] .franja-codigo {
+    font-size: 1.9rem;
+  }
+  .franja-color[data-abierto="true"] .franja-nombre {
+    font-size: 1.2rem;
+  }
+  .franja-corazon {
+    left: 0.7rem;
+    right: auto;
+    top: 50%;
+    margin-top: -1rem;
+  }
+  .franja-color[data-abierto="true"] .franja-corazon {
+    top: 0.9rem;
+    margin-top: 0;
+  }
+  .franja-acciones {
+    position: relative;
+    z-index: 2;
+    display: none;
+    margin-top: 0.85rem;
+    flex-direction: column;
+    gap: 0.45rem;
+    width: 100%;
+  }
+  .franja-color[data-abierto="true"] .franja-acciones {
+    display: flex;
+  }
+  .franja-acciones button {
+    border-radius: 0.9rem;
+    background: rgb(255 255 255 / 0.9);
+    padding: 0.6rem 0.9rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-tinta-900);
+    box-shadow: 0 1px 3px rgb(26 26 26 / 0.2);
+    transition: background-color 0.12s, transform 0.12s;
+  }
+  .franja-acciones button:hover {
+    background: #fff;
+    transform: translateY(-1px);
+  }
+  .franja-pie {
+    display: flex;
+    height: 2.9rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.3rem;
+    background: var(--color-crema-50);
+    color: var(--color-tinta-500);
+  }
+  .franja-pie span:first-child {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.72rem;
+  }
+  .franja-pie span:last-child {
+    font-size: 1.05rem;
+  }
+
+  .abanico-flecha {
+    position: absolute;
+    top: 50%;
+    z-index: 20;
+    display: none;
+    width: 3.2rem;
+    height: 3.2rem;
+    margin-top: -1.6rem;
+    place-items: center;
+    border-radius: 9999px;
+    background: var(--color-tinta-900);
+    color: var(--color-crema-50);
+    box-shadow: 0 6px 16px rgb(26 26 26 / 0.3);
+    transition: transform 0.12s, background-color 0.12s, opacity 0.12s;
+  }
+  .abanico-flecha:hover {
+    background: var(--color-brand-600);
+    transform: scale(1.08);
+  }
+  .abanico-flecha:disabled {
+    opacity: 0.3;
+    pointer-events: none;
+  }
+  .abanico-flecha-izq {
+    left: 0;
+  }
+  .abanico-flecha-der {
+    right: 0;
+  }
+
+  .abanico-espectro {
+    position: relative;
+    margin: 0.9rem 0.5rem 0;
+    height: 3.4rem;
+    cursor: pointer;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .abanico-barra {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0.85rem;
+    height: 1.7rem;
+    border-radius: 9999px;
+    box-shadow: inset 0 0 0 1px rgb(26 26 26 / 0.12);
+  }
+  .abanico-manija {
+    position: absolute;
+    top: 0.1rem;
+    width: 3.1rem;
+    height: 3.1rem;
+    margin-left: -1.55rem;
+    border-radius: 9999px;
+    border: 4px solid #fff;
+    box-shadow: 0 3px 10px rgb(26 26 26 / 0.4);
+    pointer-events: none;
+    transition: left 0.12s ease-out;
+  }
+  .abanico-espectro:focus-visible {
+    outline: 3px solid var(--color-brand-500);
+    outline-offset: 4px;
+    border-radius: 9999px;
+  }
+
+  @media (min-width: 768px) {
+    .abanico-cartas {
+      --ancho: 440px;
+      gap: 32px;
+    }
+    .abanico-flecha {
+      display: grid;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .franja-color,
+    .abanico-manija {
+      transition-duration: 0.01s;
+    }
+  }
+
+</style>
+
 <script>
   import datosColores from "../data/lanco_colores.json";
   import {
     enriquecerColores,
+    textoSobre,
     ETIQUETAS_FAMILIA,
     ORDEN_FAMILIAS,
     combinador,
@@ -224,6 +775,27 @@ import CTABand from "../components/CTABand.astro";
     type ObjetivoCombinacion,
   } from "../lib/color-lanco";
   import { abrirModalColor } from "../lib/color-modal";
+  import {
+    ajustarLuz,
+    colorDeZona,
+    coloresDominantes,
+    etiquetaSimilitud,
+    indexarAbanico,
+    parecidosEnAbanico,
+    rgbAHex,
+    rgbALab,
+    type Rgb,
+  } from "../lib/color-foto";
+  import {
+    alCambiarApartados,
+    alternarApartado,
+    apartados,
+    estaApartado,
+    quitarApartado,
+    vaciarApartados,
+  } from "../lib/colores-apartados";
+  import { fetchConfiguracion } from "../lib/content";
+  import { enlaceWhatsapp } from "../lib/site-chrome";
   import { escapeHtml } from "../lib/render-utils";
   import {
     areaDesdeAnchoAlto,
@@ -233,17 +805,29 @@ import CTABand from "../components/CTABand.astro";
     type TipoProducto,
   } from "../lib/rendimiento";
 
-  // ---------- Abanico de colores, agrupado por familia ----------
   const paleta: ColorEnriquecido[] = enriquecerColores(datosColores as ColorLanco[]);
   const porCodigo = new Map(paleta.map((c) => [c.codigo, c]));
+  const claveDe = new Map<string, string>();
 
-  const secciones = document.getElementById("colores-secciones") as HTMLElement;
   const contador = document.getElementById("colores-contador") as HTMLElement;
   const inputBuscar = document.getElementById("colores-buscar") as HTMLInputElement;
-  const selectFamilia = document.getElementById("colores-familia") as HTMLSelectElement;
+  const sugerencias = document.getElementById("colores-sugerencias") as HTMLElement;
+  const chips = document.getElementById("colores-chips") as HTMLElement;
+  const botonesVista = document.querySelectorAll<HTMLButtonElement>("[data-vista]");
+  const vistaAbanico = document.getElementById("vista-abanico") as HTMLElement;
+  const vistaFamilias = document.getElementById("vista-familias") as HTMLElement;
+  const secciones = document.getElementById("colores-secciones") as HTMLElement;
+  const vacio = document.getElementById("colores-vacio") as HTMLElement;
 
-  selectFamilia.innerHTML += ORDEN_FAMILIAS.map((f) => `<option value="${f}">${escapeHtml(ETIQUETAS_FAMILIA[f])}</option>`).join("");
+  type Vista = "abanico" | "familias";
+  let vista: Vista = "abanico";
+  try {
+    if (localStorage.getItem("sc-colores-vista") === "familias") vista = "familias";
+  } catch {}
+  let familiaFiltro: FamiliaColor | "" = "";
 
+  /** Codigo o texto sin guiones, espacios ni mayusculas: "3g1 5", "3G1-5" y "3g15" son lo mismo. */
+  const clave = (texto: string): string => normalizar(texto).replace(/[^a-z0-9]/g, "");
   function normalizar(texto: string): string {
     return texto
       .toLowerCase()
@@ -251,73 +835,775 @@ import CTABand from "../components/CTABand.astro";
       .replace(/[̀-ͯ]/g, "");
   }
 
-  function swatchHtml(c: ColorEnriquecido): string {
-    return `
-      <button
-        type="button"
-        data-codigo="${escapeHtml(c.codigo)}"
-        class="group blob-corner overflow-hidden border border-tinta-900/5 bg-crema-50 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
-      >
-        <div class="h-20 w-full" style="background:${c.hex}"></div>
-        <div class="p-3">
-          <p class="truncate text-xs font-bold text-tinta-900">${escapeHtml(c.nombre)}</p>
-          <p class="mt-0.5 font-mono text-[11px] text-tinta-500">${escapeHtml(c.codigo)}</p>
-        </div>
-      </button>`;
+  paleta.forEach((c) => claveDe.set(c.codigo, clave(c.codigo)));
+  function coincideBusqueda(c: ColorEnriquecido, texto: string, k: string): boolean {
+    return normalizar(c.nombre).includes(texto) || (k !== "" && (claveDe.get(c.codigo) ?? "").includes(k));
   }
 
-  function seccionHtml(familia: FamiliaColor, colores: ColorEnriquecido[]): string {
+  const ICONO_CORAZON =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.4 7.9 3.5 5 6.6 5c1.9 0 3.5 1 4.4 2.5h2C13.9 6 15.5 5 17.4 5c3.1 0 5.2 2.9 3.9 6.3-1.8 4.6-9.3 9.2-9.3 9.2z"/></svg>';
+
+  function corazonHtml(c: ColorEnriquecido, extra = ""): string {
+    const ap = estaApartado(c.codigo);
+    return `<button type="button" data-apartar="${escapeHtml(c.codigo)}" class="corazon-btn ${extra}" aria-pressed="${ap}" aria-label="Apartar ${escapeHtml(c.nombre)}" title="${ap ? "Quitar de mi selección" : "Apartar este color"}">${ICONO_CORAZON}</button>`;
+  }
+
+  function colorRepresentativo(familia: FamiliaColor): string {
+    const grupo = paleta.filter((c) => c.familia === familia).sort((a, b) => b.l - a.l);
+    return grupo.length ? grupo[Math.floor(grupo.length * 0.4)].hex : "#cccccc";
+  }
+
+  // ======================================================================
+  // ABANICO: cada página es una tira de colores (3G1-1, 3G1-2, ...), igual
+  // que el abanico físico. Se pasa de una en una, deslizando, con las
+  // flechas, o saltando con la barra de espectro.
+  // ======================================================================
+  interface Franja {
+    prefijo: string;
+    colores: ColorEnriquecido[];
+  }
+
+  const prefijoDe = (c: ColorEnriquecido): string => c.codigo.replace(/-\d+$/, "");
+  const numeroDe = (c: ColorEnriquecido): number => Number(c.codigo.match(/-(\d+)$/)?.[1] ?? 0);
+  const familiasSinMatiz = new Set<FamiliaColor>(["blancos", "cremas_beiges", "neutros"]);
+  const posicionFamilia = new Map(ORDEN_FAMILIAS.map((f, i) => [f, i]));
+  const colorMedio = (f: Franja): ColorEnriquecido => f.colores[Math.floor(f.colores.length / 2)];
+
+  /** Agrupa por código (3G1-1..3G1-8 = una tira) y ordena las tiras como un
+   * espectro: blancos y neutros primero, luego por matiz -así páginas
+   * vecinas se parecen y pasar de una a otra se siente continuo. */
+  function construirFranjas(colores: ColorEnriquecido[]): Franja[] {
+    const grupos = new Map<string, ColorEnriquecido[]>();
+    for (const c of colores) {
+      const k = prefijoDe(c);
+      if (!grupos.has(k)) grupos.set(k, []);
+      grupos.get(k)!.push(c);
+    }
+    const lista: Franja[] = [...grupos].map(([prefijo, cs]) => ({
+      prefijo,
+      colores: cs.sort((a, b) => numeroDe(a) - numeroDe(b)),
+    }));
+    return lista.sort((a, b) => {
+      const ra = colorMedio(a);
+      const rb = colorMedio(b);
+      const fa = posicionFamilia.get(ra.familia) ?? 0;
+      const fb = posicionFamilia.get(rb.familia) ?? 0;
+      if (fa !== fb) return fa - fb;
+      if (familiasSinMatiz.has(ra.familia)) return rb.l - ra.l;
+      return ra.h - rb.h || rb.l - ra.l;
+    });
+  }
+
+  // El abanico es un carrusel NATIVO (desplazamiento horizontal con imán por
+  // página): el propio teléfono se encarga del deslizar, así que responde
+  // igual con deslizamientos lentos, rápidos o en diagonal, y el scroll
+  // vertical de la página nunca se traba. Las tarjetas se inclinan según
+  // su distancia al centro para dar el efecto de abanico.
+  const escenario = document.getElementById("abanico-escenario") as HTMLElement;
+  const pista = document.getElementById("abanico-cartas") as HTMLElement;
+  const botonesNav = document.querySelectorAll<HTMLButtonElement>("[data-nav]");
+  const paginaActual = document.getElementById("abanico-pagina-actual") as HTMLElement;
+  const paginaTotal = document.getElementById("abanico-pagina-total") as HTMLElement;
+  const espectro = document.getElementById("abanico-espectro") as HTMLElement;
+  const barraEspectro = document.getElementById("abanico-barra") as HTMLElement;
+  const manija = document.getElementById("abanico-manija") as HTMLElement;
+
+  let franjas: Franja[] = [];
+  let indice = 0;
+  let abierto: string | null = null;
+  let objetivo: number | null = null;
+  let temporizadorObjetivo: ReturnType<typeof setTimeout> | undefined;
+  let ventana = new Set<number>();
+
+  function cartaHtml(i: number): string {
+    const f = franjas[i];
+    const colores = f.colores
+      .map(
+        (c) => `
+        <div class="franja-color" data-codigo-franja="${escapeHtml(c.codigo)}" data-abierto="${c.codigo === abierto}" style="background:${c.hex};color:${textoSobre(c.hex)}">
+          <button type="button" class="franja-abrir" data-abrir="${escapeHtml(c.codigo)}" aria-expanded="${c.codigo === abierto}" aria-label="${escapeHtml(c.nombre)}, ${escapeHtml(c.codigo)}. Tocá para verlo en grande"></button>
+          ${corazonHtml(c, "franja-corazon")}
+          <div class="franja-texto">
+            <div class="franja-codigo">${escapeHtml(c.codigo)}</div>
+            <div class="franja-nombre">${escapeHtml(c.nombre)}</div>
+          </div>
+          <div class="franja-acciones">
+            <button type="button" data-combinar="${escapeHtml(c.codigo)}">Ideas para combinarlo</button>
+            <button type="button" data-grande="${escapeHtml(c.codigo)}">Ver en pantalla completa</button>
+          </div>
+        </div>`,
+      )
+      .join("");
+    return `<div class="franja-lista">${colores}</div><div class="franja-pie"><span>${escapeHtml(f.prefijo)}</span><span>${i + 1}</span></div>`;
+  }
+
+  const slideDe = (i: number): HTMLElement | null => (pista.children[i] as HTMLElement | undefined) ?? null;
+  const cartaDe = (i: number): HTMLElement | null => (slideDe(i)?.firstElementChild as HTMLElement | null) ?? null;
+
+  /** Las tarjetas se llenan solo cuando están cerca: así hay 255 páginas
+   * disponibles sin cargar miles de elementos de golpe. */
+  function llenar(i: number): void {
+    const slide = slideDe(i);
+    const carta = cartaDe(i);
+    if (!slide || !carta || slide.dataset.listo) return;
+    slide.dataset.listo = "1";
+    carta.innerHTML = cartaHtml(i);
+  }
+
+  function pasoPagina(): number {
+    const a = pista.children[0] as HTMLElement | undefined;
+    const b = pista.children[1] as HTMLElement | undefined;
+    if (!a) return 0;
+    return b ? b.offsetLeft - a.offsetLeft : a.offsetWidth;
+  }
+
+  function aplicarAbierto(): void {
+    pista.querySelectorAll<HTMLElement>(".franja-color").forEach((el) => {
+      const esAbierto = el.dataset.codigoFranja === abierto;
+      el.dataset.abierto = String(esAbierto);
+      el.querySelector(".franja-abrir")?.setAttribute("aria-expanded", String(esAbierto));
+    });
+  }
+
+  function actualizarPie(): void {
+    const n = franjas.length;
+    paginaActual.textContent = String(n ? indice + 1 : 0);
+    paginaTotal.textContent = String(n);
+    espectro.setAttribute("aria-valuenow", String(indice + 1));
+    espectro.setAttribute("aria-valuemax", String(Math.max(1, n)));
+    if (n) {
+      manija.style.left = `${((indice + 0.5) / n) * 100}%`;
+      manija.style.background = colorMedio(franjas[indice]).hex;
+    }
+    botonesNav.forEach((b) => {
+      b.disabled = b.dataset.nav === "ant" ? indice <= 0 : indice >= n - 1;
+    });
+  }
+
+  /** Se ejecuta mientras se desplaza: calcula la página actual, llena las
+   * tarjetas cercanas e inclina las vecinas como un abanico. */
+  function ajustarAbanico(): void {
+    const n = franjas.length;
+    const paso = pasoPagina();
+    if (!n || paso <= 0) return;
+    const pos = pista.scrollLeft / paso;
+
+    let nuevo = objetivo ?? Math.max(0, Math.min(n - 1, Math.round(pos)));
+    if (objetivo !== null && Math.abs(pos - objetivo) < 0.03) objetivo = null;
+    if (nuevo !== indice) {
+      indice = nuevo;
+      if (abierto && !franjas[indice].colores.some((c) => c.codigo === abierto)) {
+        abierto = null;
+        aplicarAbierto();
+      }
+      actualizarPie();
+    }
+
+    for (let i = Math.max(0, indice - 3); i <= Math.min(n - 1, indice + 4); i++) llenar(i);
+
+    const nueva = new Set<number>();
+    for (let i = Math.max(0, Math.floor(pos) - 2); i <= Math.min(n - 1, Math.ceil(pos) + 3); i++) {
+      nueva.add(i);
+      const carta = cartaDe(i);
+      if (!carta) continue;
+      const o = i - pos;
+      const ao = Math.min(Math.abs(o), 2);
+      const giro = Math.max(-8, Math.min(8, o * 2.8));
+      carta.style.transform = `translateY(${(ao * 8).toFixed(1)}px) rotate(${giro.toFixed(2)}deg) scale(${(1 - ao * 0.04).toFixed(3)})`;
+    }
+    for (const i of ventana) {
+      if (!nueva.has(i)) {
+        const carta = cartaDe(i);
+        if (carta) carta.style.transform = "";
+      }
+    }
+    ventana = nueva;
+  }
+
+  function ir(destino: number, instantaneo = false): void {
+    const n = franjas.length;
+    if (!n) return;
+    const nuevo = Math.max(0, Math.min(n - 1, destino));
+    for (let i = Math.max(0, nuevo - 3); i <= Math.min(n - 1, nuevo + 4); i++) llenar(i);
+    if (nuevo !== indice) {
+      indice = nuevo;
+      abierto = null;
+      aplicarAbierto();
+      actualizarPie();
+    }
+    objetivo = nuevo;
+    clearTimeout(temporizadorObjetivo);
+    temporizadorObjetivo = setTimeout(() => {
+      objetivo = null;
+      ajustarAbanico();
+    }, 900);
+    pista.scrollTo({ left: nuevo * pasoPagina(), behavior: instantaneo ? "auto" : "smooth" });
+    if (instantaneo) ajustarAbanico();
+  }
+
+  function pintarEspectro(): void {
+    const n = franjas.length;
+    const tramos = franjas.map((f, i) => `${colorMedio(f).hex} ${((i / n) * 100).toFixed(3)}% ${(((i + 1) / n) * 100).toFixed(3)}%`);
+    barraEspectro.style.background = `linear-gradient(to right, ${tramos.join(",")})`;
+  }
+
+  function reconstruirAbanico(): void {
+    const base = familiaFiltro ? paleta.filter((c) => c.familia === familiaFiltro) : paleta;
+    franjas = construirFranjas(base);
+    pista.innerHTML = franjas
+      .map((_, i) => `<div class="abanico-slide" data-i="${i}"><div class="abanico-carta"></div></div>`)
+      .join("");
+    ventana = new Set();
+    indice = 0;
+    abierto = null;
+    objetivo = null;
+    pista.scrollTo({ left: 0, behavior: "auto" });
+    pintarEspectro();
+    for (let i = 0; i < Math.min(franjas.length, 5); i++) llenar(i);
+    ajustarAbanico();
+    actualizarPie();
+    contador.textContent = `${base.length} colores · ${franjas.length} páginas`;
+  }
+
+  let cuadroPendiente = false;
+  pista.addEventListener(
+    "scroll",
+    () => {
+      if (cuadroPendiente) return;
+      cuadroPendiente = true;
+      requestAnimationFrame(() => {
+        cuadroPendiente = false;
+        ajustarAbanico();
+      });
+    },
+    { passive: true },
+  );
+  const soltarObjetivo = () => {
+    objetivo = null;
+  };
+  pista.addEventListener("pointerdown", soltarObjetivo, { passive: true });
+
+  // Ayuda para que deslizar sea siempre cómodo: el carrusel nativo solo pasa
+  // de página si se arrastra más de la mitad (o con mucho impulso). Aquí, un
+  // deslizamiento horizontal claro -aunque sea corto o lento- avanza una
+  // página. No usa preventDefault, así el scroll vertical queda intacto.
+  let toque: { x: number; y: number; pagina: number } | null = null;
+  pista.addEventListener(
+    "touchstart",
+    (e) => {
+      soltarObjetivo();
+      if (e.touches.length !== 1) {
+        toque = null;
+        return;
+      }
+      toque = { x: e.touches[0].clientX, y: e.touches[0].clientY, pagina: indice };
+    },
+    { passive: true },
+  );
+  pista.addEventListener(
+    "touchend",
+    (e) => {
+      const inicio = toque;
+      toque = null;
+      if (!inicio || !e.changedTouches.length) return;
+      const dx = e.changedTouches[0].clientX - inicio.x;
+      const dy = e.changedTouches[0].clientY - inicio.y;
+      if (Math.abs(dx) > 28 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+        ir(inicio.pagina + (dx < 0 ? 1 : -1));
+      }
+    },
+    { passive: true },
+  );
+  pista.addEventListener("touchcancel", () => (toque = null), { passive: true });
+  window.addEventListener("resize", () => {
+    if (franjas.length) pista.scrollTo({ left: indice * pasoPagina(), behavior: "auto" });
+  });
+
+  botonesNav.forEach((b) =>
+    b.addEventListener("click", () => ir((objetivo ?? indice) + (b.dataset.nav === "sig" ? 1 : -1))),
+  );
+
+  document.addEventListener("keydown", (e) => {
+    if (vista !== "abanico" || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
+    if (["INPUT", "SELECT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
+    const modalColor = document.getElementById("modal-color");
+    if (modalColor && !modalColor.classList.contains("hidden")) return;
+    if (!apartadosPanel.classList.contains("hidden")) return;
+    e.preventDefault();
+    ir((objetivo ?? indice) + (e.key === "ArrowRight" ? 1 : -1));
+  });
+
+  // ---------- Barra de espectro: tocar o arrastrar para saltar de página ----------
+  let barraGesto: { id: number; x: number; y: number; activo: boolean; tactil: boolean } | null = null;
+  function indiceDesdeX(x: number): number {
+    const r = barraEspectro.getBoundingClientRect();
+    const t = (x - r.left) / r.width;
+    return Math.max(0, Math.min(franjas.length - 1, Math.floor(t * franjas.length)));
+  }
+  function activarBarra(e: PointerEvent): void {
+    if (!barraGesto) return;
+    barraGesto.activo = true;
+    try {
+      espectro.setPointerCapture(e.pointerId);
+    } catch {}
+  }
+  // Con el dedo, la barra deja pasar el scroll vertical de la página: solo
+  // reacciona a un toque o a un arrastre horizontal. Con el mouse, salta al instante.
+  espectro.addEventListener("pointerdown", (e) => {
+    const tactil = e.pointerType !== "mouse";
+    barraGesto = { id: e.pointerId, x: e.clientX, y: e.clientY, activo: false, tactil };
+    if (!tactil) {
+      activarBarra(e);
+      ir(indiceDesdeX(e.clientX), true);
+    }
+  });
+  espectro.addEventListener("pointermove", (e) => {
+    if (!barraGesto || e.pointerId !== barraGesto.id) return;
+    if (!barraGesto.activo) {
+      const dx = e.clientX - barraGesto.x;
+      const dy = e.clientY - barraGesto.y;
+      if (Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) activarBarra(e);
+      else return;
+    }
+    ir(indiceDesdeX(e.clientX), true);
+  });
+  espectro.addEventListener("pointerup", (e) => {
+    if (barraGesto && !barraGesto.activo && barraGesto.tactil && e.pointerId === barraGesto.id) {
+      ir(indiceDesdeX(e.clientX), true);
+    }
+    barraGesto = null;
+  });
+  espectro.addEventListener("pointercancel", () => {
+    barraGesto = null;
+  });
+
+  // ---------- Tocar un color: se agranda dentro de la tira ----------
+  function alMostrarEnAbanico(c: ColorEnriquecido): void {
+    const idx = franjas.findIndex((f) => f.prefijo === prefijoDe(c));
+    if (idx < 0) return;
+    ir(idx, true);
+    abierto = c.codigo;
+    aplicarAbierto();
+  }
+
+  pista.addEventListener("click", (e) => {
+    const destino = e.target as HTMLElement;
+    const corazon = destino.closest("button[data-apartar]") as HTMLButtonElement | null;
+    if (corazon) {
+      alternarApartado(corazon.dataset.apartar!);
+      return;
+    }
+    const abrir = destino.closest("button[data-abrir]") as HTMLButtonElement | null;
+    if (abrir) {
+      const codigo = abrir.dataset.abrir!;
+      abierto = abierto === codigo ? null : codigo;
+      aplicarAbierto();
+      return;
+    }
+    const grande = destino.closest("button[data-grande]") as HTMLButtonElement | null;
+    if (grande) {
+      const color = porCodigo.get(grande.dataset.grande!);
+      if (color) abrirDetalle(color, franjas.flatMap((f) => f.colores), grande, alMostrarEnAbanico);
+      return;
+    }
+    const combinar = destino.closest("button[data-combinar]") as HTMLButtonElement | null;
+    if (combinar) {
+      const color = porCodigo.get(combinar.dataset.combinar!);
+      if (color) elegirColorCombinador(color);
+    }
+  });
+
+  // ---------- Buscar: salta a la página del color ----------
+  let autoSalto: ReturnType<typeof setTimeout> | undefined;
+  function ocultarSugerencias(): void {
+    sugerencias.classList.add("hidden");
+    sugerencias.innerHTML = "";
+  }
+
+  function coincidencias(): ColorEnriquecido[] {
+    const texto = normalizar(inputBuscar.value.trim());
+    if (!texto) return [];
+    const k = clave(texto);
+    const peso = (c: ColorEnriquecido): number => {
+      const cc = claveDe.get(c.codigo) ?? "";
+      if (k && cc === k) return 0;
+      if (k && cc.startsWith(k)) return 1;
+      return 2;
+    };
+    return paleta
+      .filter((c) => coincideBusqueda(c, texto, k))
+      .map((c, i) => ({ c, p: peso(c), i }))
+      .sort((a, b) => a.p - b.p || a.i - b.i)
+      .map((x) => x.c);
+  }
+
+  /** Si lo escrito es un codigo completo (o deja un solo resultado), ese es el color buscado. */
+  function resultadoClaro(): ColorEnriquecido | null {
+    const k = clave(inputBuscar.value);
+    if (k.length < 2) return null;
+    const res = coincidencias();
+    const exacto = res.find((c) => claveDe.get(c.codigo) === k);
+    if (exacto) return exacto;
+    return res.length === 1 ? res[0] : null;
+  }
+
+  function mostrarSugerencias(): void {
+    const res = coincidencias().slice(0, 8);
+    if (!res.length) {
+      if (inputBuscar.value.trim()) {
+        sugerencias.innerHTML = '<p class="px-4 py-3 text-sm text-tinta-500">No encontramos ese color.</p>';
+        sugerencias.classList.remove("hidden");
+      } else {
+        ocultarSugerencias();
+      }
+      return;
+    }
+    sugerencias.innerHTML = res
+      .map(
+        (c) => `
+        <button type="button" data-sugerido="${escapeHtml(c.codigo)}" class="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-crema-100">
+          <span class="h-8 w-8 shrink-0 rounded-lg border border-tinta-900/10" style="background:${c.hex}"></span>
+          <span class="text-sm text-tinta-900">${escapeHtml(c.nombre)} <span class="font-mono text-xs text-tinta-500">${escapeHtml(c.codigo)}</span></span>
+        </button>`,
+      )
+      .join("");
+    sugerencias.classList.remove("hidden");
+  }
+
+  function saltarA(color: ColorEnriquecido): void {
+    ocultarSugerencias();
+    inputBuscar.blur();
+    if (!franjas.some((f) => f.prefijo === prefijoDe(color))) {
+      familiaFiltro = "";
+      pintarChips();
+      reconstruirAbanico();
+    }
+    alMostrarEnAbanico(color);
+    // se espera un instante para que el teclado del celular termine de cerrarse
+    setTimeout(() => escenario.scrollIntoView({ behavior: "smooth", block: "center" }), 180);
+  }
+
+  sugerencias.addEventListener("click", (e) => {
+    const boton = (e.target as HTMLElement).closest("button[data-sugerido]") as HTMLButtonElement | null;
+    const color = boton ? porCodigo.get(boton.dataset.sugerido!) : undefined;
+    if (color) saltarA(color);
+  });
+  document.addEventListener("click", (e) => {
+    const destino = e.target as HTMLElement;
+    if (destino === inputBuscar || sugerencias.contains(destino)) return;
+    ocultarSugerencias();
+  });
+  inputBuscar.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && vista === "abanico") {
+      e.preventDefault();
+      clearTimeout(autoSalto);
+      const elegido = resultadoClaro() ?? coincidencias()[0];
+      if (elegido) saltarA(elegido);
+    }
+  });
+
+  // ======================================================================
+  // POR FAMILIAS: tarjetas grandes agrupadas por familia de color.
+  // ======================================================================
+  const GRILLA_FAMILIAS = "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6";
+  let listaFamilias: ColorEnriquecido[] = [];
+
+  function tarjetaFamiliaHtml(c: ColorEnriquecido): string {
     return `
-      <div>
-        <h3 class="font-display text-lg font-bold text-tinta-900">${escapeHtml(ETIQUETAS_FAMILIA[familia])} <span class="font-sans text-sm font-normal text-tinta-500">(${colores.length})</span></h3>
-        <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          ${colores.map(swatchHtml).join("")}
-        </div>
+      <div class="paleta-celda familia-tarjeta">
+        <button type="button" data-codigo="${escapeHtml(c.codigo)}" class="block w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500" aria-label="${escapeHtml(c.nombre)}, ${escapeHtml(c.codigo)}">
+          <div class="h-24 w-full" style="background:${c.hex}"></div>
+          <div class="p-3">
+            <p class="truncate text-xs font-bold text-tinta-900">${escapeHtml(c.nombre)}</p>
+            <p class="mt-0.5 font-mono text-[11px] text-tinta-500">${escapeHtml(c.codigo)}</p>
+          </div>
+        </button>
+        ${corazonHtml(c)}
       </div>`;
   }
 
-  function repintar(): void {
+  function repintarFamilias(): void {
     const texto = normalizar(inputBuscar.value.trim());
-    const familiaFiltro = selectFamilia.value as FamiliaColor | "";
-
+    const k = clave(texto);
     const filtrados = paleta.filter((c) => {
       if (familiaFiltro && c.familia !== familiaFiltro) return false;
       if (!texto) return true;
-      return normalizar(c.codigo).includes(texto) || normalizar(c.nombre).includes(texto);
+      return coincideBusqueda(c, texto, k);
     });
 
     contador.textContent = `${filtrados.length} colores${filtrados.length !== paleta.length ? ` de ${paleta.length}` : ""}`;
+    vacio.classList.toggle("hidden", filtrados.length > 0);
 
     if (texto) {
-      // Buscando texto: una sola grilla plana, agrupar por familia no ayuda
-      // cuando ya se sabe qué se busca.
-      secciones.innerHTML = `<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">${filtrados.map(swatchHtml).join("")}</div>`;
-    } else {
-      const familias = familiaFiltro ? [familiaFiltro] : ORDEN_FAMILIAS;
-      secciones.innerHTML = familias
-        .map((f) => filtrados.filter((c) => c.familia === f))
-        .filter((grupo) => grupo.length > 0)
-        .map((grupo) => seccionHtml(grupo[0].familia, grupo))
-        .join("");
+      listaFamilias = filtrados;
+      secciones.innerHTML = filtrados.length
+        ? `<div class="${GRILLA_FAMILIAS}">${filtrados.map(tarjetaFamiliaHtml).join("")}</div>`
+        : "";
+      return;
     }
+    const familias = familiaFiltro ? [familiaFiltro] : ORDEN_FAMILIAS;
+    const grupos = familias
+      .map((f) => filtrados.filter((c) => c.familia === f))
+      .filter((grupo) => grupo.length > 0);
+    listaFamilias = grupos.flat();
+    secciones.innerHTML = grupos
+      .map(
+        (grupo) => `
+        <div>
+          <h3 class="flex items-center gap-2 font-display text-lg font-bold text-tinta-900"><i class="block h-4 w-4 rounded-full border border-tinta-900/15" style="background:${colorRepresentativo(grupo[0].familia)}"></i>${escapeHtml(ETIQUETAS_FAMILIA[grupo[0].familia])} <span class="font-sans text-sm font-normal text-tinta-500">(${grupo.length})</span></h3>
+          <div class="mt-3 ${GRILLA_FAMILIAS}">${grupo.map(tarjetaFamiliaHtml).join("")}</div>
+        </div>`,
+      )
+      .join("");
+  }
+
+  secciones.addEventListener("click", (e) => {
+    const destino = e.target as HTMLElement;
+    const corazon = destino.closest("button[data-apartar]") as HTMLButtonElement | null;
+    if (corazon) {
+      alternarApartado(corazon.dataset.apartar!);
+      return;
+    }
+    const boton = destino.closest("button[data-codigo]") as HTMLButtonElement | null;
+    if (!boton) return;
+    const color = porCodigo.get(boton.dataset.codigo!);
+    if (color) abrirDetalle(color, listaFamilias, boton);
+  });
+
+  // ======================================================================
+  // Chips, cambio de vista y búsqueda
+  // ======================================================================
+  function pintarChips(): void {
+    const total = `<button type="button" data-familia="" class="chip-familia" aria-pressed="${familiaFiltro === ""}">Todos</button>`;
+    chips.innerHTML =
+      total +
+      ORDEN_FAMILIAS.map(
+        (f) =>
+          `<button type="button" data-familia="${f}" class="chip-familia" aria-pressed="${familiaFiltro === f}"><i style="background:${colorRepresentativo(f)}"></i>${escapeHtml(ETIQUETAS_FAMILIA[f])}</button>`,
+      ).join("");
+  }
+
+  function aplicarVista(): void {
+    botonesVista.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.vista === vista)));
+    vistaAbanico.classList.toggle("hidden", vista !== "abanico");
+    vistaFamilias.classList.toggle("hidden", vista !== "familias");
+    inputBuscar.placeholder = vista === "abanico" ? "Buscá un color y saltá a su página" : "Buscá por código o nombre";
+  }
+
+  function repintar(): void {
+    if (vista === "abanico") reconstruirAbanico();
+    else repintarFamilias();
   }
 
   let debounce: ReturnType<typeof setTimeout> | undefined;
   inputBuscar.addEventListener("input", () => {
     clearTimeout(debounce);
-    debounce = setTimeout(repintar, 150);
+    clearTimeout(autoSalto);
+    if (vista === "abanico") {
+      debounce = setTimeout(mostrarSugerencias, 80);
+      // un codigo completo (o un unico resultado) salta solo, sin tener que tocar la sugerencia
+      const claro = resultadoClaro();
+      if (claro) {
+        const k = clave(inputBuscar.value);
+        autoSalto = setTimeout(() => {
+          if (vista === "abanico" && clave(inputBuscar.value) === k) saltarA(claro);
+        }, 450);
+      }
+    } else {
+      debounce = setTimeout(repintarFamilias, 150);
+    }
   });
-  selectFamilia.addEventListener("change", repintar);
 
-  secciones.addEventListener("click", (e) => {
-    const boton = (e.target as HTMLElement).closest("button[data-codigo]") as HTMLButtonElement | null;
+  botonesVista.forEach((b) =>
+    b.addEventListener("click", () => {
+      vista = b.dataset.vista as Vista;
+      try {
+        localStorage.setItem("sc-colores-vista", vista);
+      } catch {}
+      inputBuscar.value = "";
+      ocultarSugerencias();
+      aplicarVista();
+      repintar();
+    }),
+  );
+
+  chips.addEventListener("click", (e) => {
+    const boton = (e.target as HTMLElement).closest("button[data-familia]") as HTMLButtonElement | null;
+    if (!boton) return;
+    familiaFiltro = boton.dataset.familia as FamiliaColor | "";
+    pintarChips();
+    repintar();
+  });
+
+  function abrirDetalle(
+    color: ColorEnriquecido,
+    lista: ColorEnriquecido[],
+    disparador?: HTMLElement,
+    alMostrar?: (c: ColorEnriquecido) => void,
+  ): void {
+    abrirModalColor(color, {
+      lista,
+      paleta,
+      disparador,
+      alMostrar,
+      alCombinar: (c) => {
+        cerrarPanel();
+        elegirColorCombinador(c);
+      },
+    });
+  }
+
+  // ---------- Colores apartados ----------
+  const apartadosBarra = document.getElementById("apartados-barra") as HTMLElement;
+  const apartadosMuestras = document.getElementById("apartados-muestras") as HTMLElement;
+  const apartadosCuenta = document.getElementById("apartados-cuenta") as HTMLElement;
+  const apartadosPanel = document.getElementById("apartados-panel") as HTMLElement;
+  const apartadosLista = document.getElementById("apartados-lista") as HTMLElement;
+  const apartadosWhatsapp = document.getElementById("apartados-whatsapp") as HTMLAnchorElement;
+  const apartadosCopiar = document.getElementById("apartados-copiar") as HTMLButtonElement;
+  let numeroWhatsapp = "";
+
+  apartadosPanel.setAttribute("data-bloquea-scroll", "");
+
+  function coloresApartados(): ColorEnriquecido[] {
+    return apartados()
+      .map((codigo) => porCodigo.get(codigo))
+      .filter((c): c is ColorEnriquecido => !!c);
+  }
+
+  function textoSeleccion(lista: ColorEnriquecido[]): string {
+    return `Hola, me interesan estos colores LANCO del abanico de Súper Color:\n${lista.map((c) => `- ${c.nombre} (${c.codigo})`).join("\n")}`;
+  }
+
+  function actualizarApartados(): void {
+    const lista = coloresApartados();
+
+    document.querySelectorAll<HTMLButtonElement>("button[data-apartar]").forEach((b) => {
+      const ap = estaApartado(b.dataset.apartar!);
+      b.setAttribute("aria-pressed", String(ap));
+      b.title = ap ? "Quitar de mi selección" : "Apartar este color";
+    });
+
+    apartadosBarra.classList.toggle("hidden", lista.length === 0);
+    apartadosBarra.classList.toggle("flex", lista.length > 0);
+    apartadosCuenta.textContent = `${lista.length} color${lista.length === 1 ? "" : "es"} apartado${lista.length === 1 ? "" : "s"}`;
+    apartadosMuestras.innerHTML = lista
+      .slice(-5)
+      .map((c) => `<span class="block h-8 w-8 rounded-full border-2 border-tinta-900" style="background:${c.hex}"></span>`)
+      .join("");
+
+    apartadosLista.innerHTML = lista.length
+      ? lista
+          .map(
+            (c) => `
+            <div class="familia-tarjeta">
+              <button type="button" data-codigo="${escapeHtml(c.codigo)}" class="block w-full text-left" aria-label="${escapeHtml(c.nombre)}, ${escapeHtml(c.codigo)}">
+                <div class="h-20 w-full" style="background:${c.hex}"></div>
+                <div class="p-3">
+                  <p class="truncate text-xs font-bold text-tinta-900">${escapeHtml(c.nombre)}</p>
+                  <p class="mt-0.5 font-mono text-[11px] text-tinta-500">${escapeHtml(c.codigo)}</p>
+                </div>
+              </button>
+              <button type="button" data-quitar="${escapeHtml(c.codigo)}" aria-label="Quitar ${escapeHtml(c.nombre)}" class="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full bg-white/85 text-tinta-900 shadow transition-colors hover:bg-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18" /></svg>
+              </button>
+            </div>`,
+          )
+          .join("")
+      : '<p class="col-span-full py-10 text-center text-sm text-tinta-500">Todavía no apartaste ningún color.</p>';
+
+    if (lista.length === 0) cerrarPanel();
+    actualizarEnlaceWhatsapp(lista);
+  }
+
+  function actualizarEnlaceWhatsapp(lista: ColorEnriquecido[]): void {
+    if (!numeroWhatsapp || lista.length === 0) return;
+    apartadosWhatsapp.href = enlaceWhatsapp(numeroWhatsapp, textoSeleccion(lista));
+    apartadosWhatsapp.target = "_blank";
+    apartadosWhatsapp.rel = "noopener";
+  }
+
+  function abrirPanel(): void {
+    if (coloresApartados().length === 0) return;
+    apartadosPanel.classList.remove("hidden");
+    apartadosPanel.classList.add("flex");
+    document.body.classList.add("overflow-hidden");
+  }
+  function cerrarPanel(): void {
+    if (apartadosPanel.classList.contains("hidden")) return;
+    apartadosPanel.classList.add("hidden");
+    apartadosPanel.classList.remove("flex");
+    document.body.classList.remove("overflow-hidden");
+  }
+
+  document.getElementById("apartados-abrir")?.addEventListener("click", abrirPanel);
+  document.getElementById("apartados-cerrar")?.addEventListener("click", cerrarPanel);
+  document.getElementById("apartados-fondo")?.addEventListener("click", cerrarPanel);
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const modalColor = document.getElementById("modal-color");
+    if (modalColor && !modalColor.classList.contains("hidden")) return;
+    cerrarPanel();
+  });
+
+  apartadosLista.addEventListener("click", (e) => {
+    const destino = e.target as HTMLElement;
+    const quitar = destino.closest("button[data-quitar]") as HTMLButtonElement | null;
+    if (quitar) {
+      quitarApartado(quitar.dataset.quitar!);
+      return;
+    }
+    const boton = destino.closest("button[data-codigo]") as HTMLButtonElement | null;
     if (!boton) return;
     const color = porCodigo.get(boton.dataset.codigo!);
-    if (!color) return;
-    abrirModalColor(color, elegirColorCombinador, boton);
+    if (color) abrirDetalle(color, coloresApartados(), boton);
   });
 
+  document.getElementById("apartados-vaciar")?.addEventListener("click", () => {
+    if (confirm("¿Quitar todos los colores apartados?")) vaciarApartados();
+  });
+
+  apartadosCopiar.addEventListener("click", async () => {
+    const texto = coloresApartados()
+      .map((c) => `${c.nombre} (${c.codigo})`)
+      .join("\n");
+    try {
+      await navigator.clipboard.writeText(texto);
+      apartadosCopiar.textContent = "¡Copiado!";
+    } catch {
+      apartadosCopiar.textContent = "No se pudo copiar";
+    }
+    setTimeout(() => (apartadosCopiar.textContent = "Copiar códigos"), 1800);
+  });
+
+  alCambiarApartados(actualizarApartados);
+
+  fetchConfiguracion().then(({ data }) => {
+    if (data?.whatsapp && data.whatsapp.trim()) {
+      numeroWhatsapp = data.whatsapp;
+      actualizarEnlaceWhatsapp(coloresApartados());
+    }
+  });
+
+  pintarChips();
+  aplicarVista();
   repintar();
+  actualizarApartados();
+
+  // Al entrar, si el abanico no cabe completo en pantalla (tablet horizontal,
+  // celular), la página baja sola una vez para dejarlo a la vista, sin que
+  // haya que buscar dónde hacer scroll. Solo si todavía no se movió nada.
+  function acomodarAlEntrar(): void {
+    setTimeout(() => {
+      if (vista !== "abanico" || window.scrollY > 5) return;
+      const r = escenario.getBoundingClientRect();
+      if (r.bottom + 40 <= window.innerHeight) return;
+      const reducido = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: window.scrollY + r.top - 10, behavior: reducido ? "auto" : "smooth" });
+    }, 950);
+  }
+  if (document.readyState === "complete") acomodarAlEntrar();
+  else window.addEventListener("load", acomodarAlEntrar);
 
   // ---------- Combinador ----------
   const comboBuscar = document.getElementById("combinador-buscar") as HTMLInputElement;
@@ -390,9 +1676,11 @@ import CTABand from "../components/CTABand.astro";
   function sugerenciaHtml(s: ReturnType<typeof combinador>[number]): string {
     return `
       <div class="rounded-2xl border border-tinta-900/5 bg-crema-100 p-3">
-        <div class="h-16 w-full rounded-lg" style="background:${s.color.hex}"></div>
-        <p class="mt-2 truncate text-xs font-bold text-tinta-900">${escapeHtml(s.color.nombre)}</p>
-        <p class="font-mono text-[11px] text-tinta-500">${escapeHtml(s.color.codigo)}</p>
+        <button type="button" data-codigo="${escapeHtml(s.color.codigo)}" class="block w-full text-left" aria-label="Ver ${escapeHtml(s.color.nombre)} en grande">
+          <div class="h-16 w-full rounded-lg" style="background:${s.color.hex}"></div>
+          <p class="mt-2 truncate text-xs font-bold text-tinta-900">${escapeHtml(s.color.nombre)}</p>
+          <p class="font-mono text-[11px] text-tinta-500">${escapeHtml(s.color.codigo)}</p>
+        </button>
         <p class="mt-1.5 text-[11px] capitalize text-brand-600">${escapeHtml(s.tipo)}</p>
         <p class="mt-1 text-[11px] leading-snug text-tinta-600">${escapeHtml(s.descripcion)}</p>
       </div>`;
@@ -406,6 +1694,202 @@ import CTABand from "../components/CTABand.astro";
     comboResultado.classList.remove("hidden");
     comboResultado.classList.add("grid");
     comboResultado.innerHTML = sugerencias.map(sugerenciaHtml).join("");
+    sugerenciasActuales = sugerencias.map((x) => x.color);
+  });
+
+  let sugerenciasActuales: ColorEnriquecido[] = [];
+  comboResultado.addEventListener("click", (e) => {
+    const boton = (e.target as HTMLElement).closest("button[data-codigo]") as HTMLButtonElement | null;
+    if (!boton) return;
+    const color = porCodigo.get(boton.dataset.codigo!);
+    if (color) abrirDetalle(color, sugerenciasActuales, boton);
+  });
+
+  // ---------- Colores desde una foto ----------
+  const indiceFoto = indexarAbanico(paleta);
+  const fotoArchivo = document.getElementById("foto-archivo") as HTMLInputElement;
+  const fotoZona = document.getElementById("foto-zona") as HTMLElement;
+  const fotoError = document.getElementById("foto-error") as HTMLElement;
+  const fotoVisor = document.getElementById("foto-visor") as HTMLElement;
+  const fotoCanvas = document.getElementById("foto-canvas") as HTMLCanvasElement;
+  const fotoDominantesCaja = document.getElementById("foto-dominantes-caja") as HTMLElement;
+  const fotoDominantes = document.getElementById("foto-dominantes") as HTMLElement;
+  const fotoObjetivo = document.getElementById("foto-objetivo") as HTMLElement;
+  const fotoLuz = document.getElementById("foto-luz") as HTMLInputElement;
+  const fotoResultado = document.getElementById("foto-resultado") as HTMLElement;
+  const fotoOtra = document.getElementById("foto-otra") as HTMLButtonElement;
+  const fotoCtx = fotoCanvas.getContext("2d", { willReadFrequently: true })!;
+
+  const FOTO_ANCHO_MAX = 1200;
+  let fotoPixeles: ImageData | null = null;
+  let fotoPunto: { x: number; y: number } | null = null;
+  let fotoRgb: Rgb | null = null;
+  let fotoLista: ColorEnriquecido[] = [];
+
+  function mostrarErrorFoto(mensaje: string): void {
+    fotoError.textContent = mensaje;
+    fotoError.classList.remove("hidden");
+  }
+
+  async function abrirImagen(archivo: File): Promise<{ fuente: CanvasImageSource; ancho: number; alto: number }> {
+    if ("createImageBitmap" in window) {
+      try {
+        const bm = await createImageBitmap(archivo, { imageOrientation: "from-image" });
+        return { fuente: bm, ancho: bm.width, alto: bm.height };
+      } catch {}
+    }
+    const url = URL.createObjectURL(archivo);
+    try {
+      const img = new Image();
+      img.decoding = "async";
+      img.src = url;
+      await img.decode();
+      return { fuente: img, ancho: img.naturalWidth, alto: img.naturalHeight };
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  function dibujarFoto(): void {
+    if (!fotoPixeles) return;
+    fotoCtx.putImageData(fotoPixeles, 0, 0);
+    if (!fotoPunto) return;
+    const r = Math.max(10, Math.round(fotoCanvas.width * 0.022));
+    fotoCtx.lineWidth = Math.max(3, r * 0.28);
+    fotoCtx.strokeStyle = "#000000";
+    fotoCtx.beginPath();
+    fotoCtx.arc(fotoPunto.x, fotoPunto.y, r, 0, Math.PI * 2);
+    fotoCtx.stroke();
+    fotoCtx.lineWidth = Math.max(1.5, r * 0.14);
+    fotoCtx.strokeStyle = "#ffffff";
+    fotoCtx.beginPath();
+    fotoCtx.arc(fotoPunto.x, fotoPunto.y, r, 0, Math.PI * 2);
+    fotoCtx.stroke();
+  }
+
+  function pintarDominantes(lista: { rgb: Rgb; proporcion: number }[]): void {
+    fotoDominantesCaja.classList.toggle("hidden", lista.length === 0);
+    fotoDominantes.innerHTML = lista
+      .map((c) => {
+        const hex = rgbAHex(c.rgb);
+        return `<button type="button" data-hex="${hex}" title="Usar este color" aria-label="Usar el color ${hex}" class="flex items-center gap-2 rounded-full border border-tinta-900/10 bg-crema-100 py-1 pl-1 pr-3 text-xs font-bold text-tinta-700 transition-colors hover:border-brand-500">
+          <span class="h-7 w-7 rounded-full border border-tinta-900/10" style="background:${hex}"></span>${Math.round(c.proporcion * 100)}%
+        </button>`;
+      })
+      .join("");
+  }
+
+  function calcularParecidos(): void {
+    if (!fotoRgb) return;
+    const hex = rgbAHex(fotoRgb);
+    fotoObjetivo.innerHTML = `
+      <span class="h-10 w-10 shrink-0 rounded-xl border border-tinta-900/10" style="background:${hex}"></span>
+      <div class="flex-1">
+        <p class="text-sm font-bold text-tinta-900">El color que elegiste de tu foto</p>
+        <p class="font-mono text-xs text-tinta-500">${hex}</p>
+      </div>`;
+    const lab = ajustarLuz(rgbALab(fotoRgb), Number(fotoLuz.value));
+    const parecidos = parecidosEnAbanico(indiceFoto, lab, 8);
+    fotoLista = parecidos.map((p) => p.color);
+    fotoResultado.innerHTML = parecidos
+      .map(
+        (p) => `
+      <div class="rounded-2xl border border-tinta-900/5 bg-crema-100 p-3">
+        <button type="button" data-codigo="${escapeHtml(p.color.codigo)}" class="block w-full text-left" aria-label="Ver ${escapeHtml(p.color.nombre)} en grande">
+          <div class="h-16 w-full rounded-lg" style="background:${p.color.hex}"></div>
+          <p class="mt-2 truncate text-xs font-bold text-tinta-900">${escapeHtml(p.color.nombre)}</p>
+          <p class="font-mono text-[11px] text-tinta-500">${escapeHtml(p.color.codigo)}</p>
+        </button>
+        <p class="mt-1.5 text-[11px] text-brand-600">${etiquetaSimilitud(p.de)}</p>
+      </div>`,
+      )
+      .join("");
+  }
+
+  function elegirPunto(x: number, y: number): void {
+    if (!fotoPixeles) return;
+    fotoPunto = { x, y };
+    const radio = Math.max(4, Math.round(fotoCanvas.width * 0.012));
+    fotoRgb = colorDeZona(fotoPixeles.data, fotoPixeles.width, fotoPixeles.height, x, y, radio);
+    dibujarFoto();
+    calcularParecidos();
+  }
+
+  function puntoDeEvento(e: PointerEvent | MouseEvent): { x: number; y: number } {
+    const caja = fotoCanvas.getBoundingClientRect();
+    return {
+      x: ((e.clientX - caja.left) * fotoCanvas.width) / caja.width,
+      y: ((e.clientY - caja.top) * fotoCanvas.height) / caja.height,
+    };
+  }
+
+  async function cargarFoto(archivo: File): Promise<void> {
+    fotoError.classList.add("hidden");
+    if (!archivo.type.startsWith("image/")) {
+      mostrarErrorFoto("Ese archivo no parece una foto. Probá con una imagen JPG o PNG.");
+      return;
+    }
+    try {
+      const { fuente, ancho, alto } = await abrirImagen(archivo);
+      const escala = Math.min(1, FOTO_ANCHO_MAX / ancho);
+      fotoCanvas.width = Math.max(1, Math.round(ancho * escala));
+      fotoCanvas.height = Math.max(1, Math.round(alto * escala));
+      fotoCtx.drawImage(fuente, 0, 0, fotoCanvas.width, fotoCanvas.height);
+      fotoPixeles = fotoCtx.getImageData(0, 0, fotoCanvas.width, fotoCanvas.height);
+      const dominantes = coloresDominantes(fotoPixeles.data, fotoPixeles.width, fotoPixeles.height, 5);
+      pintarDominantes(dominantes);
+      fotoZona.classList.add("hidden");
+      fotoVisor.classList.remove("hidden");
+      fotoLuz.value = "0";
+      fotoPunto = null;
+      fotoRgb = null;
+      if (dominantes.length > 0) {
+        fotoRgb = dominantes[0].rgb;
+        calcularParecidos();
+      } else {
+        fotoObjetivo.innerHTML = '<p class="text-sm text-tinta-600">Tocá la foto para elegir un color.</p>';
+        fotoResultado.innerHTML = "";
+      }
+      dibujarFoto();
+    } catch {
+      mostrarErrorFoto("No pudimos abrir esa foto. Probá con otra.");
+    }
+  }
+
+  fotoArchivo.addEventListener("change", () => {
+    const archivo = fotoArchivo.files?.[0];
+    if (archivo) void cargarFoto(archivo);
+  });
+  fotoCanvas.addEventListener("click", (e) => {
+    const p = puntoDeEvento(e);
+    elegirPunto(p.x, p.y);
+  });
+  fotoCanvas.addEventListener("pointermove", (e) => {
+    if (e.pointerType !== "mouse" || e.buttons !== 1) return;
+    const p = puntoDeEvento(e);
+    elegirPunto(p.x, p.y);
+  });
+  fotoDominantes.addEventListener("click", (e) => {
+    const boton = (e.target as HTMLElement).closest("button[data-hex]") as HTMLButtonElement | null;
+    if (!boton) return;
+    const n = parseInt(boton.dataset.hex!.replace("#", ""), 16);
+    fotoRgb = { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+    fotoPunto = null;
+    dibujarFoto();
+    calcularParecidos();
+  });
+  fotoLuz.addEventListener("input", calcularParecidos);
+  fotoResultado.addEventListener("click", (e) => {
+    const boton = (e.target as HTMLElement).closest("button[data-codigo]") as HTMLButtonElement | null;
+    if (!boton) return;
+    const color = porCodigo.get(boton.dataset.codigo!);
+    if (color) abrirDetalle(color, fotoLista, boton);
+  });
+  fotoOtra.addEventListener("click", () => {
+    fotoArchivo.value = "";
+    fotoVisor.classList.add("hidden");
+    fotoZona.classList.remove("hidden");
+    fotoPixeles = null;
   });
 
   // ---------- Calculadora de rendimiento ----------

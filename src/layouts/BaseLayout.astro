@@ -19,10 +19,27 @@ const {
   <head>
     <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="generator" content={Astro.generator} />
     <meta name="description" content={description} />
     <title>{title} · Súper Color</title>
+    <script is:inline>
+      // sin zoom por pellizco ni doble toque (en iPhone/iPad el meta viewport solo no basta)
+      document.addEventListener("gesturestart", function (e) { e.preventDefault(); });
+      document.addEventListener("gesturechange", function (e) { e.preventDefault(); });
+      document.addEventListener("touchmove", function (e) { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+      document.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+      document.addEventListener("keydown", function (e) {
+        if ((e.ctrlKey || e.metaKey) && (e.key === "+" || e.key === "-" || e.key === "=" || e.key === "0")) e.preventDefault();
+      });
+    </script>
+    <script is:inline>
+      try {
+        if (sessionStorage.getItem("sc-loader-visto")) {
+          document.documentElement.classList.add("sin-loader");
+        }
+      } catch (e) {}
+    </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -32,6 +49,52 @@ const {
     />
   </head>
   <body class="flex min-h-screen flex-col overflow-x-hidden bg-crema-100 text-tinta-900">
+    <div id="sc-loader" role="status" aria-live="polite" aria-label="Cargando Súper Color">
+      <div class="sc-loader-contenido">
+        <div class="sc-loader-gota">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <defs>
+              <clipPath id="sc-gota-clip">
+                <path d="M32 4c9 12 18 22 18 33a18 18 0 1 1-36 0C14 26 23 16 32 4Z"></path>
+              </clipPath>
+            </defs>
+            <path d="M32 4c9 12 18 22 18 33a18 18 0 1 1-36 0C14 26 23 16 32 4Z" fill="#fcefdd"></path>
+            <g clip-path="url(#sc-gota-clip)">
+              <g class="sc-loader-relleno">
+                <path d="M-10 0 Q 0 -4 11 0 T 32 0 T 53 0 T 74 0 V 70 H -10 Z" fill="#C62828"></path>
+              </g>
+            </g>
+            <path d="M32 4c9 12 18 22 18 33a18 18 0 1 1-36 0C14 26 23 16 32 4Z" fill="none" stroke="#C62828" stroke-width="2.5" stroke-linejoin="round"></path>
+            <path d="M23 38a9 9 0 0 0 9 9" stroke="#FFF8F0" stroke-width="4.5" stroke-linecap="round" fill="none"></path>
+          </svg>
+        </div>
+        <p class="sc-loader-nombre">Súper <span>Color</span></p>
+        <div class="sc-loader-puntos" aria-hidden="true">
+          <i style="background:#C62828"></i><i style="background:#ffc107"></i><i style="background:#1565c0"></i><i style="background:#2e9e4f"></i><i style="background:#d6247a"></i>
+        </div>
+      </div>
+    </div>
+    <script is:inline>
+      (function () {
+        var el = document.getElementById("sc-loader");
+        if (!el) return;
+        var inicio = Date.now();
+        var cerrado = false;
+        function cerrar() {
+          if (cerrado) return;
+          cerrado = true;
+          var espera = Math.max(0, 700 - (Date.now() - inicio));
+          setTimeout(function () {
+            el.classList.add("sc-loader-oculto");
+            try { sessionStorage.setItem("sc-loader-visto", "1"); } catch (e) {}
+            setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 500);
+          }, espera);
+        }
+        if (document.readyState === "complete") cerrar();
+        else window.addEventListener("load", cerrar);
+        setTimeout(cerrar, 8000);
+      })();
+    </script>
     <NavBar />
     <main class="flex-1">
       <slot />

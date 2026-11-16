@@ -279,3 +279,52 @@ export function combinador(
 
   return todas.slice(0, 10);
 }
+
+/** Color de texto legible (oscuro o claro) para escribir encima de [hex]. */
+export function textoSobre(hex: string): string {
+  const { r, g, b } = hexARgb(hex);
+  const luminancia = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminancia > 0.62 ? "#1a1a1a" : "#ffffff";
+}
+
+/** Orden de "paleta": por familia (el mismo orden de arcoíris de
+ * ORDEN_FAMILIAS) y, dentro de cada familia, de lo más claro a lo más
+ * oscuro, para que el mosaico se vea como una degradación continua en vez
+ * de manchas sueltas. */
+export function ordenarComoPaleta(colores: ColorEnriquecido[]): ColorEnriquecido[] {
+  const posicion = new Map(ORDEN_FAMILIAS.map((f, i) => [f, i]));
+  const sinMatiz: FamiliaColor[] = ["blancos", "cremas_beiges", "neutros"];
+  // Familias con color: se agrupan en franjas de 8 grados de matiz y cada
+  // franja va de claro a oscuro. Las familias sin matiz definido (blancos,
+  // cremas, grises) van solo de claro a oscuro.
+  const franja = (c: ColorEnriquecido): number => (sinMatiz.includes(c.familia) ? 0 : Math.floor(c.h / 8));
+  return [...colores].sort((a, b) => {
+    const fa = posicion.get(a.familia) ?? 0;
+    const fb = posicion.get(b.familia) ?? 0;
+    if (fa !== fb) return fa - fb;
+    const ba = franja(a);
+    const bb = franja(b);
+    if (ba !== bb) return ba - bb;
+    return b.l - a.l;
+  });
+}
+
+/** Los [n] colores del abanico más parecidos a [origen] (distancia RGB
+ * ponderada -aprox. percepción humana-). */
+export function coloresParecidos(origen: ColorEnriquecido, paleta: ColorEnriquecido[], n = 8): ColorEnriquecido[] {
+  const o = hexARgb(origen.hex);
+  const distancia = (c: ColorEnriquecido): number => {
+    const p = hexARgb(c.hex);
+    const rm = (o.r + p.r) / 2;
+    const dr = o.r - p.r;
+    const dg = o.g - p.g;
+    const db = o.b - p.b;
+    return (2 + rm / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256) * db * db;
+  };
+  return paleta
+    .filter((c) => c.codigo !== origen.codigo)
+    .map((c) => ({ c, d: distancia(c) }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, n)
+    .map((x) => x.c);
+}
