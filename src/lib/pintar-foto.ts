@@ -284,6 +284,7 @@ export function filtrarPorTono(
   const n = ancho * alto;
   const ref = tonoDeReferencia(croma, ancho, alto, x, y);
   const limite = Math.max(0.08, Math.min(0.14, ref.dispersion * 4));
+  const satRef = Math.hypot(ref.r - 1 / 3, ref.g - 1 / 3);
   const ok = new Uint8Array(n);
   let dentro = 0;
   let parecidos = 0;
@@ -293,9 +294,12 @@ export function filtrarPorTono(
     const relLuz = Math.log(Math.max(1e-4, croma.luz[k]) / ref.luz);
     const cambioDeLuz = Math.min(1, Math.abs(relLuz) / LOG3);
     const distTono = Math.hypot(croma.cr[k] - ref.r, croma.cg[k] - ref.g);
-    // Mucho más claro y además de otro tono no es la misma pared con más sol:
-    // es un recuadro pintado de otro color (y al revés desde el recuadro).
-    const otraSuperficie = Math.abs(relLuz) > LUZ_MUY_DISTINTA && distTono > 0.045;
+    // Mucho más claro y además más blanco no es la misma pared con más sol (el
+    // sol la hace más clara pero igual de viva o más): es un recuadro o un
+    // borde de otro color. Más oscuro y más cálido sí puede ser la misma pared
+    // en sombra (bajo un alero rebota la luz del techo o del piso).
+    const otraSuperficie =
+      relLuz > LUZ_MUY_DISTINTA && distTono > 0.045 && Math.hypot(croma.cr[k] - 1 / 3, croma.cg[k] - 1 / 3) < satRef - 0.03;
     if (croma.oscuro[k] || (!otraSuperficie && distTono <= limite * (1 + 0.5 * cambioDeLuz))) {
       ok[k] = 1;
       parecidos++;
@@ -603,6 +607,7 @@ export function luzPareja(
     }
   }
   const maxHueco = Math.round((lado / 40) ** 2);
+  const maxHuecoOscuro = Math.round((lado / 55) ** 2);
   const visto = new Uint8Array(m);
   const comp: number[] = [];
   for (let i = 0; i < m; i++) {
@@ -625,7 +630,8 @@ export function luzPareja(
         pila[tope++] = v;
       }
     }
-    if (!conOtroColor && comp.length <= maxHueco && oscuros < comp.length * 0.1) {
+    const chiquito = comp.length <= maxHuecoOscuro;
+    if (!conOtroColor && comp.length <= maxHueco && (chiquito || oscuros < comp.length * 0.1)) {
       for (const p of comp) {
         S[p] = 2;
         relleno[global(p)] = 255;
@@ -649,17 +655,56 @@ export function luzPareja(
   ls.sort((a, b) => a - b);
   const luzAlta = ls[Math.floor(ls.length * 0.8)];
 
-  // Lo muy oscuro (una reja, el hueco de una ventana, la sombra bajo el
-  // techo) no es un desperfecto ni sirve de muestra: queda como está.
-  const fijo = new Uint8Array(m);
+  // Lo muy oscuro y grande (una reja, el hueco de una ventana, la sombra bajo
+  // el techo, un cable que cruza) no es un desperfecto ni sirve de muestra:
+  // queda como está. Lo muy oscuro pero chico (donde se cayó el repello y se
+  // ve el block) sí es un desperfecto.
+  const oscuroAca = new Uint8Array(m);
   for (let i = 0; i < m; i++) {
-    if (!S[i]) continue;
+    if (S[i] !== 1) continue;
     const j = global(i) * 4;
-    if (L[i] < luzAlta - 1.4 || LINEAL[rgba[j]] + LINEAL[rgba[j + 1]] + LINEAL[rgba[j + 2]] <= 0.05) fijo[i] = 1;
+    if (L[i] < luzAlta - 1.4 || LINEAL[rgba[j]] + LINEAL[rgba[j + 1]] + LINEAL[rgba[j + 2]] <= 0.05) oscuroAca[i] = 1;
+  }
+  const fijo = new Uint8Array(m);
+  const malo = new Uint8Array(m);
+  const maxManchaOscura = Math.round((lado / 30) ** 2);
+  // Muchos huequitos oscuros juntos son una reja o una ventana, no repello caído.
+  const densidadOscura = cajaPromedio(Float32Array.from(oscuroAca), w, h, Math.max(3, Math.round(lado / 50)));
+  const maxLadoMancha = lado / 12;
+  const vistoOsc = new Uint8Array(m);
+  for (let i = 0; i < m; i++) {
+    if (!oscuroAca[i] || vistoOsc[i]) continue;
+    comp.length = 0;
+    vistoOsc[i] = 1;
+    pila[0] = i;
+    tope = 1;
+    let cx0 = w, cy0 = h, cx1 = 0, cy1 = 0;
+    while (tope) {
+      const p = pila[--tope];
+      comp.push(p);
+      const x = p % w;
+      const y = (p - x) / w;
+      if (x < cx0) cx0 = x;
+      if (x > cx1) cx1 = x;
+      if (y < cy0) cy0 = y;
+      if (y > cy1) cy1 = y;
+      for (const v of [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1, p >= w ? p - w : -1, p + w < m ? p + w : -1]) {
+        if (v < 0 || !oscuroAca[v] || vistoOsc[v]) continue;
+        vistoOsc[v] = 1;
+        pila[tope++] = v;
+      }
+    }
+    let densidad = 0;
+    for (const p of comp) densidad += densidadOscura[p];
+    densidad /= comp.length;
+    const chica = comp.length <= maxManchaOscura && Math.max(cx1 - cx0, cy1 - cy0) <= maxLadoMancha && densidad < 0.3;
+    for (const p of comp) {
+      if (chica) malo[p] = 1;
+      else fijo[p] = 1;
+    }
   }
 
-  const malo = new Uint8Array(m);
-  const amp = 0.08;
+  const amp = 0.12;
   const pico = (a: number, b: number, c: number) =>
     a > luzAlta - 1.4 && c > luzAlta - 1.4 && ((b - a > amp && b - c > amp) || (a - b > amp && c - b > amp));
   let cuantosMalos = 0;
@@ -667,7 +712,7 @@ export function luzPareja(
   for (let i = 0; i < m; i++) {
     if (!S[i] || fijo[i]) continue;
     cuantosS++;
-    if (S[i] === 2) {
+    if (malo[i] || S[i] === 2) {
       malo[i] = 1;
       cuantosMalos++;
       continue;
@@ -718,7 +763,7 @@ export function luzPareja(
     const num = cajaPromedio(Ls, w, h, r);
     const den = cajaPromedio(sano, w, h, r);
     for (let i = 0; i < m; i++) {
-      if (!pendiente[i] || den[i] < 0.2) continue;
+      if (!pendiente[i] || den[i] < 0.06) continue;
       salida[i] = num[i] / den[i];
       pendiente[i] = 0;
       llenado[i] = 1;
@@ -740,6 +785,10 @@ export function luzPareja(
     for (let i = 0; i < m; i++) if (llenado[i] && dv[i] > 0.05) salida[i] = nv[i] / dv[i];
   }
 
+  const fino = cajaPromedio(L, w, h, 2);
+  const grano = new Float32Array(m);
+  for (let i = 0; i < m; i++) if (llenado[i]) grano[i] = Math.max(-0.035, Math.min(0.035, L[i] - fino[i]));
+
   // Repello disparejo: las variaciones chicas de luz se achican; las grandes
   // (bordes de sombra) quedan como están.
   const valS = new Float32Array(m);
@@ -752,7 +801,9 @@ export function luzPareja(
     const base = num[i] / den[i];
     const dev = salida[i] - base;
     const t = Math.min(1, Math.max(0, (Math.abs(dev) - 0.08) / 0.14));
-    const v = base + dev * (0.3 + 0.7 * t * t * (3 - 2 * t));
+    // El granito fino del repello se conserva siempre (también donde se
+    // rellenó): sin él la pared queda lisa como una chapa.
+    const v = base + dev * (0.55 + 0.45 * t * t * (3 - 2 * t)) + grano[i];
     luz[global(i)] = Math.exp(v);
   }
   return { luz, relleno };
