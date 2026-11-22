@@ -104,3 +104,42 @@ test("ordenarOpciones prefiere la forma de un solo tono con mejor puntaje", () =
   const orden = ordenarOpciones([todo, pared], [0.97, 0.9], croma, w, h, 5, 5);
   assert.equal(orden[0], 1);
 });
+
+test("el pincel fino no se sale a la superficie de al lado", async () => {
+  const { pincelar, tonoEn } = await import("../src/lib/pintar-foto.ts");
+  const w = 40, h = 20;
+  const foto = imagen(w, h, (x) => (x < 20 ? [240, 240, 235] : [190, 90, 70]));
+  const croma = cromaFoto(foto, w, h);
+  const tono = tonoEn(croma, w, h, 25, 10);
+  const marcados = new Set();
+  pincelar(croma, w, h, 20, 10, 8, tono, (k) => marcados.add(k));
+  assert.ok(marcados.has(10 * w + 24), "pinta el detalle donde empezó");
+  assert.ok(!marcados.has(10 * w + 15), "no pinta la pared blanca de al lado");
+  const sinLimite = new Set();
+  pincelar(croma, w, h, 20, 10, 8, null, (k) => sinLimite.add(k));
+  assert.ok(sinLimite.has(10 * w + 15), "el borrador no tiene límite de tono");
+});
+
+test("el pincel respeta la sombra de la misma superficie", async () => {
+  const { pincelar, tonoEn } = await import("../src/lib/pintar-foto.ts");
+  const w = 40, h = 20;
+  const foto = imagen(w, h, (x) => (x < 20 ? [200, 100, 80] : [120, 60, 48]));
+  const croma = cromaFoto(foto, w, h);
+  const tono = tonoEn(croma, w, h, 10, 10);
+  const marcados = new Set();
+  pincelar(croma, w, h, 20, 10, 6, tono, (k) => marcados.add(k));
+  assert.ok(marcados.has(10 * w + 24), "la parte en sombra también se pinta");
+});
+
+test("repintar una región da lo mismo que repintar todo", () => {
+  const w = 30, h = 20;
+  const foto = imagen(w, h, (x, y) => [100 + x * 3, 120 + y * 2, 140]);
+  const alfa = new Uint8Array(w * h);
+  for (let k = 0; k < alfa.length; k++) if (k % w > 10) alfa[k] = 255;
+  const capas = [{ color: { r: 40, g: 150, b: 90 }, alfa, ref: 0.4 }];
+  const todo = new Uint8ClampedArray(foto.length);
+  pintarCapas(foto, capas, todo);
+  const parcial = new Uint8ClampedArray(foto);
+  pintarCapas(foto, capas, parcial, w, { x0: 0, y0: 0, x1: w - 1, y1: h - 1 });
+  assert.deepEqual(Array.from(parcial), Array.from(todo));
+});

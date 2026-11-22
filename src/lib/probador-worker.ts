@@ -1,8 +1,8 @@
 /// <reference lib="webworker" />
 // Detector de paredes: corre EdgeTAM (Segment Anything hecho para celulares)
-// dentro del navegador del cliente. La foto nunca sale del teléfono o la
-// computadora. Usa ~300 MB de memoria al analizar: el modelo anterior
-// (SlimSAM) pasaba de 1.9 GB y Safari en iPhone cerraba la pestaña.
+// dentro del navegador del cliente. Usa ~300 MB de memoria al analizar: el
+// modelo anterior (SlimSAM) pasaba de 1.9 GB y Safari en iPhone recargaba la
+// pestaña. Guarda el análisis de cada foto para poder pasar de una a otra.
 import { AutoProcessor, EdgeTamModel, RawImage, Tensor, env } from "@huggingface/transformers";
 import {
   binarizar,
@@ -20,29 +20,33 @@ import {
 // cero), por eso el analizador va completo y el decodificador en q4.
 const MODELO = "onnx-community/EdgeTAM-ONNX";
 const PRECISION = { vision_encoder: "fp32", prompt_encoder_mask_decoder: "q4" };
+const MAX_FOTOS = 4;
 env.allowLocalModels = false;
 
 type Entrada =
-  | { tipo: "foto"; id: number; rgba: Uint8ClampedArray; ancho: number; alto: number }
-  | { tipo: "zona"; id: number; x: number; y: number }
-  | { tipo: "otra"; id: number };
+  | { tipo: "foto"; id: number; clave: number; rgba: Uint8ClampedArray; ancho: number; alto: number }
+  | { tipo: "zona"; id: number; clave: number; x: number; y: number }
+  | { tipo: "otra"; id: number; clave: number }
+  | { tipo: "olvidar"; id: number; clave: number };
+
+interface EstadoFoto {
+  ancho: number;
+  alto: number;
+  entradas: any;
+  embeddings: any;
+  guia: Float32Array;
+  canales: CanalesFoto;
+  croma: CromaFoto;
+  ultimo: { logits: Float32Array[]; orden: number[]; actual: number; x: number; y: number } | null;
+}
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 
 let modelo: any = null;
 let procesador: any = null;
 let cargando: Promise<void> | null = null;
-
-let ancho = 0;
-let alto = 0;
-let entradas: any = null;
-let embeddings: any = null;
-let guia: Float32Array | null = null;
-let canales: CanalesFoto | null = null;
-let croma: CromaFoto | null = null;
-let fotoId = 0;
-
-let ultimo: { logits: Float32Array[]; orden: number[]; actual: number; x: number; y: number } | null = null;
+const fotos = new Map<number, EstadoFoto>();
+let cola: Promise<void> = Promise.resolve();
 
 const bajado = new Map<string, { cargado: number; total: number }>();
 
@@ -108,80 +112,96 @@ function redimensionar(rgb: Uint8ClampedArray, w: number, h: number, nw: number,
   return salida;
 }
 
-async function prepararFoto(rgba: Uint8ClampedArray, w: number, h: number): Promise<void> {
+async function prepararFoto(clave: number, rgba: Uint8ClampedArray, w: number, h: number): Promise<void> {
   await cargarModelo();
-  ancho = w;
-  alto = h;
-  ultimo = null;
-  embeddings = null;
-  entradas = null;
   const rgb = new Uint8ClampedArray(w * h * 3);
   for (let k = 0, i = 0; k < w * h; k++, i += 4) {
     rgb[k * 3] = rgba[i];
     rgb[k * 3 + 1] = rgba[i + 1];
     rgb[k * 3 + 2] = rgba[i + 2];
   }
-  ctx.postMessage({ tipo: "analizando" });
+  ctx.postMessage({ tipo: "analizando", clave });
   // Se entrega ya del tamaño que pide el modelo para que la librería no use
   // OffscreenCanvas (no existe en Safari viejo); luego se le indica el tamaño
   // real para que las zonas salgan del tamaño de la foto.
   const tam = procesador.image_processor?.size ?? {};
-  const destinoAncho = tam.width ?? 1024;
-  const destinoAlto = tam.height ?? 1024;
-  entradas = await procesador(new RawImage(redimensionar(rgb, w, h, destinoAncho, destinoAlto), destinoAncho, destinoAlto, 3));
+  const dw = tam.width ?? 1024;
+  const dh = tam.height ?? 1024;
+  const entradas = await procesador(new RawImage(redimensionar(rgb, w, h, dw, dh), dw, dh, 3));
   entradas.original_sizes = [[h, w]];
-  embeddings = await modelo.get_image_embeddings(entradas);
+  const embeddings = await modelo.get_image_embeddings(entradas);
   delete entradas.pixel_values;
-  guia = guiaGris(rgba, w, h);
-  canales = canalesFoto(rgba, w, h);
-  croma = cromaFoto(rgba, w, h);
+  while (fotos.size >= MAX_FOTOS) fotos.delete(fotos.keys().next().value!);
+  fotos.set(clave, {
+    ancho: w,
+    alto: h,
+    entradas,
+    embeddings,
+    guia: guiaGris(rgba, w, h),
+    canales: canalesFoto(rgba, w, h),
+    croma: cromaFoto(rgba, w, h),
+    ultimo: null,
+  });
 }
 
-function terminarZona(logits: Float32Array, x: number, y: number): Uint8Array {
-  const binaria = zonaDesdeLogits(logits, croma!, ancho, alto, x, y);
-  return refinarMascara(binaria, guia!, ancho, alto, canales!);
+function terminarZona(f: EstadoFoto, logits: Float32Array, x: number, y: number): Uint8Array {
+  const binaria = zonaDesdeLogits(logits, f.croma, f.ancho, f.alto, x, y);
+  return refinarMascara(binaria, f.guia, f.ancho, f.alto, f.canales);
 }
 
-async function zona(x: number, y: number): Promise<{ alfa: Uint8Array; opciones: number }> {
-  if (!embeddings || !modelo || !procesador) throw new Error("sin foto");
-  const [rh, rw] = entradas.reshaped_input_sizes[0];
-  const puntos = new Tensor("float32", [(x * rw) / ancho, (y * rh) / alto], [1, 1, 1, 2]);
+async function zona(f: EstadoFoto, x: number, y: number): Promise<{ alfa: Uint8Array; opciones: number }> {
+  const [rh, rw] = f.entradas.reshaped_input_sizes[0];
+  const puntos = new Tensor("float32", [(x * rw) / f.ancho, (y * rh) / f.alto], [1, 1, 1, 2]);
   const etiquetas = new Tensor("int64", [1n], [1, 1, 1]);
-  const salida = await modelo({ ...embeddings, input_points: puntos, input_labels: etiquetas });
-  const mascaras = await procesador.post_process_masks(salida.pred_masks, entradas.original_sizes, entradas.reshaped_input_sizes, {
+  const salida = await modelo({ ...f.embeddings, input_points: puntos, input_labels: etiquetas });
+  const mascaras = await procesador.post_process_masks(salida.pred_masks, f.entradas.original_sizes, f.entradas.reshaped_input_sizes, {
     binarize: false,
   });
   const datos = mascaras[0].data as Float32Array;
-  const n = ancho * alto;
+  const n = f.ancho * f.alto;
   const logits = [0, 1, 2].map((k) => Float32Array.from(datos.subarray(k * n, (k + 1) * n)));
   const puntajes = Array.from(salida.iou_scores.data as Float32Array);
-  const orden = ordenarOpciones(logits.map((l) => binarizar(l)), puntajes, croma!, ancho, alto, x, y);
-  ultimo = { logits, orden, actual: 0, x, y };
-  return { alfa: terminarZona(logits[orden[0]], x, y), opciones: orden.length };
+  const orden = ordenarOpciones(logits.map((l) => binarizar(l)), puntajes, f.croma, f.ancho, f.alto, x, y);
+  f.ultimo = { logits, orden, actual: 0, x, y };
+  return { alfa: terminarZona(f, logits[orden[0]], x, y), opciones: orden.length };
 }
 
-function otraForma(): Uint8Array | null {
-  if (!ultimo || ultimo.orden.length < 2) return null;
-  ultimo.actual = (ultimo.actual + 1) % ultimo.orden.length;
-  return terminarZona(ultimo.logits[ultimo.orden[ultimo.actual]], ultimo.x, ultimo.y);
+function otraForma(f: EstadoFoto): Uint8Array | null {
+  const u = f.ultimo;
+  if (!u || u.orden.length < 2) return null;
+  u.actual = (u.actual + 1) % u.orden.length;
+  return terminarZona(f, u.logits[u.orden[u.actual]], u.x, u.y);
 }
 
-ctx.onmessage = async (e: MessageEvent<Entrada>) => {
-  const m = e.data;
+async function atender(m: Entrada): Promise<void> {
   try {
     if (m.tipo === "foto") {
-      fotoId = m.id;
-      await prepararFoto(m.rgba, m.ancho, m.alto);
-      if (fotoId === m.id) ctx.postMessage({ tipo: "lista", id: m.id });
-    } else if (m.tipo === "zona") {
-      const { alfa, opciones } = await zona(Math.round(m.x), Math.round(m.y));
+      await prepararFoto(m.clave, m.rgba, m.ancho, m.alto);
+      ctx.postMessage({ tipo: "lista", id: m.id });
+      return;
+    }
+    if (m.tipo === "olvidar") {
+      fotos.delete(m.clave);
+      return;
+    }
+    const f = fotos.get(m.clave);
+    if (!f) {
+      ctx.postMessage({ tipo: "sin-foto", id: m.id });
+      return;
+    }
+    if (m.tipo === "zona") {
+      const { alfa, opciones } = await zona(f, Math.round(m.x), Math.round(m.y));
       ctx.postMessage({ tipo: "zona", id: m.id, alfa, opciones }, [alfa.buffer]);
-    } else if (m.tipo === "otra") {
-      const alfa = otraForma();
-      if (alfa) ctx.postMessage({ tipo: "zona", id: m.id, alfa, opciones: ultimo?.orden.length ?? 1 }, [alfa.buffer]);
+    } else {
+      const alfa = otraForma(f);
+      if (alfa) ctx.postMessage({ tipo: "zona", id: m.id, alfa, opciones: f.ultimo?.orden.length ?? 1 }, [alfa.buffer]);
       else ctx.postMessage({ tipo: "sin-otra", id: m.id });
     }
   } catch (err) {
     ctx.postMessage({ tipo: "error", id: m.id, mensaje: String((err as Error)?.message ?? err) });
   }
+}
+
+ctx.onmessage = (e: MessageEvent<Entrada>) => {
+  cola = cola.then(() => atender(e.data));
 };

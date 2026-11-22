@@ -1,21 +1,47 @@
-// Probador de colores en fotos reales: el cliente sube una foto (o usa una de
-// ejemplo), elige un color del abanico y toca la pared. El detector marca la
-// pared exacta y se pinta conservando la luz y las sombras de la foto.
+// Probador de colores en fotos reales: el cliente sube una o varias fotos
+// (o usa una de ejemplo), elige un color del abanico y toca la pared. El
+// detector marca la pared exacta y se pinta conservando la luz y las sombras.
+// Para detalles finos hay zoom y un pincel que no se sale de la superficie
+// donde se empezó a pintar.
 import type { ColorEnriquecido } from "./color-lanco";
 import { hexARgbFoto } from "./color-foto";
 import { apartados, alCambiarApartados } from "./colores-apartados";
 import { escapeHtml } from "./render-utils";
-import { pintarCapas } from "./pintar-foto";
+import {
+  cromaFoto,
+  luminanciaLineal,
+  luzDeReferencia,
+  pincelar,
+  pintarCapas,
+  tonoEn,
+  type ColorCapa,
+  type CromaFoto,
+  type Region,
+  type Tono,
+} from "./pintar-foto";
 
 interface Capa {
   color: ColorEnriquecido;
+  rgb: ColorCapa;
   alfa: Uint8Array;
+  ref?: number;
 }
 
-type Modo = "pintar" | "quitar";
+type Modo = "pared" | "pincel" | "borrador" | "quitar";
 
 interface Paso {
-  capas: { codigo: string; alfa: Uint8Array }[];
+  capas: { codigo: string; alfa: Uint8Array; ref?: number }[];
+}
+
+interface Foto {
+  clave: number;
+  original: ImageData;
+  vista: ImageData;
+  capas: Capa[];
+  historial: Paso[];
+  lista: boolean;
+  mini: string;
+  croma?: CromaFoto;
 }
 
 export interface Probador {
@@ -24,6 +50,8 @@ export interface Probador {
 
 const LADO_MAX = 1280;
 const MAX_HISTORIAL = 12;
+const MAX_FOTOS = 4;
+const NIVELES_ZOOM = [1, 1.5, 2, 3, 4, 6];
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -31,8 +59,13 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   const seccion = $("probador");
   const inicio = $("probador-inicio");
   const archivo = $<HTMLInputElement>("probador-archivo");
+  const archivoMas = $<HTMLInputElement>("probador-archivo-mas");
   const trabajo = $("probador-trabajo");
+  const tiraFotos = $("probador-fotos");
+  const marco = $("probador-marco");
+  const caja = $("probador-caja");
   const lienzo = $<HTMLCanvasElement>("probador-canvas");
+  const anillo = $("probador-anillo");
   const estado = $("probador-estado");
   const estadoTexto = $("probador-estado-texto");
   const estadoBarra = $("probador-estado-barra");
@@ -44,35 +77,37 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   const sugerencias = $("probador-sugerencias");
   const usados = $("probador-usados");
   const botonesModo = document.querySelectorAll<HTMLButtonElement>("[data-probador-modo]");
+  const cajaTamano = $("probador-tamano-caja");
+  const tamano = $<HTMLInputElement>("probador-tamano");
+  const btnAcercar = $<HTMLButtonElement>("probador-acercar");
+  const btnAlejar = $<HTMLButtonElement>("probador-alejar");
+  const nivelZoom = $("probador-zoom-nivel");
   const btnDeshacer = $<HTMLButtonElement>("probador-deshacer");
   const btnOtra = $<HTMLButtonElement>("probador-otra");
   const btnAntes = $<HTMLButtonElement>("probador-antes");
   const btnDescargar = $<HTMLButtonElement>("probador-descargar");
-  const btnOtraFoto = $<HTMLButtonElement>("probador-otra-foto");
   const error = $("probador-error");
   const ctx = lienzo.getContext("2d", { willReadFrequently: true })!;
 
   let worker: Worker | null = null;
   let siguienteId = 1;
+  let siguienteClave = 1;
   const pendientes = new Map<number, (m: any) => void>();
 
-  let original: ImageData | null = null;
-  let vista: ImageData | null = null;
-  let fotoId = 0;
-  let lista = false;
+  let fotos: Foto[] = [];
+  let actual: Foto | null = null;
   let ocupado = false;
-  let capas: Capa[] = [];
-  let historial: Paso[] = [];
-  let ultimaOp: { modo: Modo; codigo: string; antes: Paso; opciones: number } | null = null;
-  let modo: Modo = "pintar";
+  let ultimaOp: { modo: Modo; codigo: string; antes: Paso; opciones: number; clave: number } | null = null;
+  let modo: Modo = "pared";
   let extras: ColorEnriquecido[] = [];
   let activo: ColorEnriquecido | null = null;
   let mostrandoAntes = false;
-  let ultimaFoto: { rgba: Uint8ClampedArray; ancho: number; alto: number } | null = null;
+  let zoom = 1;
 
   let vigilante: ReturnType<typeof setTimeout> | undefined;
   const LENTO = "Tu equipo está tardando demasiado en analizar la foto. Probá de nuevo o con otra foto.";
 
+  // ---------- Detector (worker) ----------
   function vigilar(ms: number, alVencer: () => void): void {
     clearTimeout(vigilante);
     vigilante = setTimeout(alVencer, ms);
@@ -83,6 +118,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     worker?.terminate();
     worker = null;
     pendientes.clear();
+    fotos.forEach((f) => (f.lista = false));
   }
 
   function crearWorker(): Worker {
@@ -94,7 +130,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
           reiniciarWorker();
           fallo("La descarga del detector se detuvo. Revisá tu conexión e intentá de nuevo.");
         });
-        mostrarEstado(`Preparando el detector de paredes… ${m.porcentaje}%`, m.porcentaje, "Solo la primera vez; después queda guardado.");
+        if (actual && !actual.lista) mostrarEstado(`Preparando el detector de paredes… ${m.porcentaje}%`, m.porcentaje, "Solo la primera vez; después queda guardado.");
         return;
       }
       if (m.tipo === "analizando") {
@@ -102,7 +138,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
           reiniciarWorker();
           fallo(LENTO);
         });
-        mostrarEstado("Analizando tu foto…", -1, "Puede tardar unos segundos.");
+        if (actual && actual.clave === m.clave) mostrarEstado("Analizando tu foto…", -1, "Puede tardar unos segundos.");
         return;
       }
       const fn = pendientes.get(m.id);
@@ -128,6 +164,30 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     });
   }
 
+  async function analizar(f: Foto): Promise<void> {
+    if (actual === f) mostrarEstado("Preparando el detector de paredes…", 0);
+    vigilar(90000, () => {
+      reiniciarWorker();
+      fallo("No pudimos preparar el detector. Revisá tu conexión e intentá de nuevo.");
+    });
+    const copia = new Uint8ClampedArray(f.original.data);
+    const r = await pedir({ tipo: "foto", clave: f.clave, rgba: copia, ancho: f.original.width, alto: f.original.height }, [copia.buffer]);
+    if (!fotos.includes(f)) return;
+    clearTimeout(vigilante);
+    if (r.tipo === "lista") {
+      f.lista = true;
+      seccion.dataset.listo = "1";
+      if (actual === f) {
+        ocultarEstado();
+        avisarListo();
+      }
+    } else {
+      console.error("probador:", r.mensaje);
+      reiniciarWorker();
+      fallo("No pudimos cargar el detector de paredes. Revisá tu conexión a internet e intentá de nuevo.");
+    }
+  }
+
   function mostrarEstado(texto: string, porcentaje: number, detalle = ""): void {
     estado.classList.remove("hidden");
     estado.classList.add("flex");
@@ -143,7 +203,6 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   }
 
   function fallo(texto: string): void {
-    lista = false;
     estado.classList.remove("hidden");
     estado.classList.add("flex");
     estadoTexto.textContent = texto;
@@ -151,8 +210,25 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     estadoReintentar.classList.remove("hidden");
   }
 
+  estadoReintentar.addEventListener("click", () => {
+    reiniciarWorker();
+    const orden = actual ? [actual, ...fotos.filter((f) => f !== actual)] : fotos;
+    orden.forEach((f) => void analizar(f));
+  });
+
   function avisar(texto: string): void {
     aviso.textContent = texto;
+  }
+
+  function textoModo(): string {
+    if (modo === "pincel") return activo ? `Pasá el dedo por el detalle que querés pintar de ${activo.nombre}. Acercá la foto para más precisión.` : "Primero elegí un color.";
+    if (modo === "borrador") return "Pasá el dedo por donde querés borrar la pintura.";
+    if (modo === "quitar") return "Tocá lo que no querés pintar (una puerta, un mueble, un marco…).";
+    return activo ? `Tocá la pared que querés pintar de ${activo.nombre}.` : "Elegí un color y tocá la pared.";
+  }
+
+  function avisarListo(): void {
+    avisar(modo === "pared" ? `Listo: ${textoModo().charAt(0).toLowerCase()}${textoModo().slice(1)}` : textoModo());
   }
 
   // ---------- Colores para elegir ----------
@@ -166,7 +242,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       }
     };
     extras.forEach(agregar);
-    capas.forEach((c) => agregar(c.color));
+    fotos.forEach((f) => f.capas.forEach((c) => agregar(c.color)));
     apartados().forEach((codigo) => agregar(porCodigo.get(codigo)));
     return salida;
   }
@@ -191,10 +267,10 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     const b = (e.target as HTMLElement).closest("button[data-color]") as HTMLButtonElement | null;
     if (!b) return;
     activo = porCodigo.get(b.dataset.color!) ?? activo;
-    modo = "pintar";
+    if (modo === "borrador" || modo === "quitar") modo = "pared";
     aplicarModo();
     pintarColores();
-    avisar(activo ? `Tocá la pared que querés pintar de ${activo.nombre}.` : "");
+    avisar(textoModo());
   });
 
   function normalizar(t: string): string {
@@ -232,10 +308,10 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     activo = c;
     buscar.value = "";
     sugerencias.classList.add("hidden");
-    modo = "pintar";
+    if (modo === "borrador" || modo === "quitar") modo = "pared";
     aplicarModo();
     pintarColores();
-    avisar(`Tocá la pared que querés pintar de ${c.nombre}.`);
+    avisar(textoModo());
   });
 
   document.addEventListener("click", (e) => {
@@ -246,78 +322,125 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   alCambiarApartados(pintarColores);
 
   // ---------- Herramientas ----------
+  function esTrazo(): boolean {
+    return modo === "pincel" || modo === "borrador";
+  }
+
   function aplicarModo(): void {
     botonesModo.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.probadorModo === modo)));
-    lienzo.style.cursor = modo === "pintar" ? "crosshair" : "not-allowed";
+    cajaTamano.classList.toggle("hidden", !esTrazo());
+    cajaTamano.classList.toggle("flex", esTrazo());
+    lienzo.style.cursor = esTrazo() ? "none" : modo === "quitar" ? "not-allowed" : "crosshair";
+    lienzo.style.touchAction = esTrazo() || zoom > 1 ? "none" : "pan-y";
+    if (!esTrazo()) anillo.classList.add("hidden");
   }
 
   botonesModo.forEach((b) =>
     b.addEventListener("click", () => {
       modo = b.dataset.probadorModo as Modo;
       aplicarModo();
-      avisar(modo === "quitar" ? "Tocá lo que no querés pintar (una puerta, un mueble, un marco…)." : activo ? `Tocá la pared que querés pintar de ${activo.nombre}.` : "Elegí un color.");
+      avisar(textoModo());
     }),
   );
 
   function actualizarBotones(): void {
-    btnDeshacer.disabled = historial.length === 0 || ocupado;
-    btnOtra.disabled = !ultimaOp || ultimaOp.opciones < 2 || ocupado;
+    const capas = actual?.capas ?? [];
+    btnDeshacer.disabled = !actual || actual.historial.length === 0 || ocupado;
+    const conOtra = !!ultimaOp && ultimaOp.clave === actual?.clave && ultimaOp.opciones > 1;
+    btnOtra.classList.toggle("hidden", !conOtra);
+    btnOtra.disabled = ocupado;
     btnDescargar.disabled = capas.length === 0;
     btnAntes.disabled = capas.length === 0;
   }
 
-  function foto(): Paso {
-    return { capas: capas.map((c) => ({ codigo: c.color.codigo, alfa: c.alfa.slice() })) };
+  function copiaPaso(f: Foto): Paso {
+    return { capas: f.capas.map((c) => ({ codigo: c.color.codigo, alfa: c.alfa.slice(), ref: c.ref })) };
   }
 
-  function restaurar(paso: Paso): void {
-    capas = paso.capas
-      .map((c) => ({ color: porCodigo.get(c.codigo)!, alfa: c.alfa.slice() }))
+  function restaurar(f: Foto, paso: Paso): void {
+    f.capas = paso.capas
+      .map((c) => {
+        const color = porCodigo.get(c.codigo)!;
+        return { color, rgb: hexARgbFoto(color.hex), alfa: c.alfa.slice(), ref: c.ref };
+      })
       .filter((c) => c.color);
   }
 
-  function guardarPaso(): Paso {
-    const p = foto();
-    historial.push(p);
-    if (historial.length > MAX_HISTORIAL) historial.shift();
+  function guardarPaso(f: Foto): Paso {
+    const p = copiaPaso(f);
+    f.historial.push(p);
+    if (f.historial.length > MAX_HISTORIAL) f.historial.shift();
     return p;
   }
 
-  function aplicarZona(op: Modo, codigo: string, zona: Uint8Array): void {
-    for (const c of capas) {
-      if (op === "pintar" && c.color.codigo === codigo) continue;
+  function capaDe(f: Foto, codigo: string): Capa {
+    let capa = f.capas.find((c) => c.color.codigo === codigo);
+    if (!capa) {
+      const color = porCodigo.get(codigo)!;
+      capa = { color, rgb: hexARgbFoto(color.hex), alfa: new Uint8Array(f.original.width * f.original.height) };
+      f.capas.push(capa);
+    }
+    return capa;
+  }
+
+  function aplicarZona(f: Foto, op: Modo, codigo: string, zona: Uint8Array): void {
+    for (const c of f.capas) {
+      if (op === "pared" && c.color.codigo === codigo) continue;
       const a = c.alfa;
       for (let k = 0; k < a.length; k++) if (zona[k]) a[k] = (a[k] * (255 - zona[k])) / 255;
+      c.ref = undefined;
     }
-    if (op === "pintar") {
-      let capa = capas.find((c) => c.color.codigo === codigo);
-      if (!capa) {
-        capa = { color: porCodigo.get(codigo)!, alfa: new Uint8Array(zona.length) };
-        capas.push(capa);
-      }
+    if (op === "pared") {
+      const capa = capaDe(f, codigo);
       const a = capa.alfa;
       for (let k = 0; k < a.length; k++) if (zona[k] > a[k]) a[k] = zona[k];
+      capa.ref = undefined;
     }
-    capas = capas.filter((c) => c.alfa.some((v) => v > 8));
+    f.capas = f.capas.filter((c) => c.alfa.some((v) => v > 8));
+  }
+
+  function capasParaPintar(f: Foto) {
+    return f.capas.map((c) => {
+      if (c.ref === undefined) c.ref = luzDeReferencia(f.original.data, c.alfa);
+      return { color: c.rgb, alfa: c.alfa, ref: c.ref };
+    });
   }
 
   function redibujar(): void {
-    if (!original || !vista) return;
-    pintarCapas(
-      original.data,
-      capas.map((c) => ({ color: hexARgbFoto(c.color.hex), alfa: c.alfa })),
-      vista.data,
-    );
-    if (!mostrandoAntes) ctx.putImageData(vista, 0, 0);
+    const f = actual;
+    if (!f) return;
+    pintarCapas(f.original.data, capasParaPintar(f), f.vista.data);
+    if (!mostrandoAntes) ctx.putImageData(f.vista, 0, 0);
     pintarUsados();
+    pintarTira();
     actualizarBotones();
   }
 
+  let regionPendiente: Region | null = null;
+  let cuadroPendiente = false;
+
+  function redibujarRegion(r: Region): void {
+    regionPendiente = regionPendiente
+      ? { x0: Math.min(regionPendiente.x0, r.x0), y0: Math.min(regionPendiente.y0, r.y0), x1: Math.max(regionPendiente.x1, r.x1), y1: Math.max(regionPendiente.y1, r.y1) }
+      : r;
+    if (cuadroPendiente) return;
+    cuadroPendiente = true;
+    requestAnimationFrame(() => {
+      cuadroPendiente = false;
+      const f = actual;
+      const reg = regionPendiente;
+      regionPendiente = null;
+      if (!f || !reg) return;
+      pintarCapas(f.original.data, capasParaPintar(f), f.vista.data, f.original.width, reg);
+      if (!mostrandoAntes) ctx.putImageData(f.vista, 0, 0, reg.x0, reg.y0, reg.x1 - reg.x0 + 1, reg.y1 - reg.y0 + 1);
+    });
+  }
+
   function pintarUsados(): void {
-    usados.innerHTML = capas.length
-      ? capas
-          .map(
-            (c) => `
+    const capas = actual?.capas ?? [];
+    usados.innerHTML = capas
+      .map(
+        (c) => `
         <div class="flex items-center gap-3 rounded-xl bg-crema-100 p-2.5">
           <span class="h-9 w-9 shrink-0 rounded-lg border border-tinta-900/10" style="background:${c.color.hex}"></span>
           <div class="min-w-0 flex-1">
@@ -326,50 +449,51 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
           </div>
           <button type="button" data-quitar-color="${escapeHtml(c.color.codigo)}" class="rounded-lg px-2.5 py-1.5 text-xs font-bold text-brand-600 hover:bg-brand-50">Quitar</button>
         </div>`,
-          )
-          .join("")
-      : "";
+      )
+      .join("");
     usados.classList.toggle("hidden", capas.length === 0);
   }
 
   usados.addEventListener("click", (e) => {
     const b = (e.target as HTMLElement).closest("button[data-quitar-color]") as HTMLButtonElement | null;
-    if (!b) return;
-    guardarPaso();
+    if (!b || !actual) return;
+    guardarPaso(actual);
     ultimaOp = null;
-    capas = capas.filter((c) => c.color.codigo !== b.dataset.quitarColor);
+    actual.capas = actual.capas.filter((c) => c.color.codigo !== b.dataset.quitarColor);
     redibujar();
   });
 
   btnDeshacer.addEventListener("click", () => {
-    const p = historial.pop();
+    if (!actual) return;
+    const p = actual.historial.pop();
     if (!p) return;
-    restaurar(p);
+    restaurar(actual, p);
     ultimaOp = null;
     redibujar();
   });
 
   btnOtra.addEventListener("click", async () => {
-    if (!ultimaOp || ocupado) return;
+    if (!ultimaOp || ocupado || !actual || ultimaOp.clave !== actual.clave) return;
     const op = ultimaOp;
+    const f = actual;
     ocupado = true;
     actualizarBotones();
-    avisar("Probando otra forma…");
-    const r = await pedir({ tipo: "otra" });
+    avisar("Buscando otro recorte…");
+    const r = await pedir({ tipo: "otra", clave: f.clave });
     ocupado = false;
     if (r.tipo === "zona" && ultimaOp === op) {
-      restaurar(op.antes);
-      aplicarZona(op.modo, op.codigo, r.alfa);
-      redibujar();
-      avisar("¿Así está mejor? Podés tocar “Otra forma” de nuevo o seguir pintando.");
+      restaurar(f, op.antes);
+      aplicarZona(f, op.modo, op.codigo, r.alfa);
+      if (actual === f) redibujar();
+      avisar("¿Así quedó mejor? Si no, tocá “Cambiar recorte” otra vez o “Deshacer”.");
     }
     actualizarBotones();
   });
 
   const verAntes = (si: boolean) => {
-    if (!original || !vista || capas.length === 0) return;
+    if (!actual || actual.capas.length === 0) return;
     mostrandoAntes = si;
-    ctx.putImageData(si ? original : vista, 0, 0);
+    ctx.putImageData(si ? actual.original : actual.vista, 0, 0);
     btnAntes.setAttribute("aria-pressed", String(si));
   };
   btnAntes.addEventListener("pointerdown", (e) => {
@@ -383,56 +507,333 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   btnAntes.addEventListener("keyup", () => verAntes(false));
   btnAntes.addEventListener("contextmenu", (e) => e.preventDefault());
 
-  // ---------- Tocar la foto ----------
-  function puntoDe(e: MouseEvent): { x: number; y: number; px: number; py: number } {
-    const caja = lienzo.getBoundingClientRect();
+  // ---------- Zoom ----------
+  function aplicarZoom(nuevo: number, cx?: number, cy?: number): void {
+    nuevo = Math.max(1, Math.min(NIVELES_ZOOM[NIVELES_ZOOM.length - 1], nuevo));
+    if (Math.abs(nuevo - zoom) < 0.001) return;
+    const r = marco.getBoundingClientRect();
+    const ax = (cx ?? r.left + r.width / 2) - r.left;
+    const ay = (cy ?? r.top + r.height / 2) - r.top;
+    const px = (marco.scrollLeft + ax) / zoom;
+    const py = (marco.scrollTop + ay) / zoom;
+    if (zoom === 1 && nuevo > 1) {
+      marco.style.height = `${marco.clientHeight}px`;
+      avisar(matchMedia("(pointer: coarse)").matches ? "Con dos dedos movés y acercás la foto." : "Arrastrá la foto (o usá las barras) para moverte.");
+    }
+    zoom = nuevo;
+    caja.style.width = `${zoom * 100}%`;
+    if (zoom === 1) marco.style.height = "";
+    marco.scrollLeft = px * zoom - ax;
+    marco.scrollTop = py * zoom - ay;
+    nivelZoom.textContent = `${zoom % 1 ? zoom.toFixed(1) : zoom}×`;
+    btnAlejar.disabled = zoom <= 1;
+    btnAcercar.disabled = zoom >= NIVELES_ZOOM[NIVELES_ZOOM.length - 1];
+    aplicarModo();
+  }
+
+  btnAcercar.addEventListener("click", () => aplicarZoom(NIVELES_ZOOM.find((z) => z > zoom + 0.01) ?? zoom));
+  btnAlejar.addEventListener("click", () => aplicarZoom([...NIVELES_ZOOM].reverse().find((z) => z < zoom - 0.01) ?? 1));
+  marco.addEventListener(
+    "wheel",
+    (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      aplicarZoom(zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15), e.clientX, e.clientY);
+    },
+    { passive: false },
+  );
+
+  // ---------- Tocar y pintar sobre la foto ----------
+  function puntoDe(cx: number, cy: number): { x: number; y: number; px: number; py: number } {
+    const r = lienzo.getBoundingClientRect();
     return {
-      x: ((e.clientX - caja.left) * lienzo.width) / caja.width,
-      y: ((e.clientY - caja.top) * lienzo.height) / caja.height,
-      px: ((e.clientX - caja.left) / caja.width) * 100,
-      py: ((e.clientY - caja.top) / caja.height) * 100,
+      x: ((cx - r.left) * lienzo.width) / r.width,
+      y: ((cy - r.top) * lienzo.height) / r.height,
+      px: ((cx - r.left) / r.width) * 100,
+      py: ((cy - r.top) / r.height) * 100,
     };
   }
 
-  lienzo.addEventListener("click", async (e) => {
-    if (!original) return;
-    if (!lista) {
+  function radioPincel(): number {
+    const r = lienzo.getBoundingClientRect();
+    return Math.max(0.6, (Number(tamano.value) / 2) * (lienzo.width / r.width));
+  }
+
+  function moverAnillo(cx: number, cy: number): void {
+    if (!esTrazo()) return;
+    const p = puntoDe(cx, cy);
+    const d = Number(tamano.value);
+    anillo.style.width = anillo.style.height = `${d}px`;
+    anillo.style.left = `${p.px}%`;
+    anillo.style.top = `${p.py}%`;
+    anillo.classList.remove("hidden");
+  }
+
+  const punteros = new Map<number, { x: number; y: number }>();
+  let gesto: { d0: number; z0: number; mx: number; my: number } | null = null;
+  let toque: { id: number; x: number; y: number; ux: number; uy: number; movio: boolean } | null = null;
+  let trazo: { id: number; tono: Tono | null; borrar: boolean; codigo: string; antes: Paso; ux: number; uy: number } | null = null;
+
+  function cancelarTrazo(): void {
+    if (!trazo || !actual) return;
+    restaurar(actual, trazo.antes);
+    actual.historial.pop();
+    trazo = null;
+    redibujar();
+  }
+
+  function pincelada(x: number, y: number): void {
+    const f = actual;
+    if (!f || !trazo || !f.croma) return;
+    const t = trazo;
+    const w = f.original.width;
+    const h = f.original.height;
+    const capa = t.borrar ? null : capaDe(f, t.codigo);
+    if (capa && capa.ref === undefined) {
+      const k = Math.max(0, Math.min(w * h - 1, Math.round(y) * w + Math.round(x)));
+      capa.ref = capa.alfa.some((v) => v > 128) ? luzDeReferencia(f.original.data, capa.alfa) : Math.max(0.02, luminanciaLineal(f.original.data, k * 4));
+    }
+    const otras = f.capas.filter((c) => c !== capa);
+    const radio = radioPincel();
+    const pasos = Math.max(1, Math.ceil(Math.hypot(x - t.ux, y - t.uy) / Math.max(0.5, radio / 3)));
+    for (let i = 1; i <= pasos; i++) {
+      const px = t.ux + ((x - t.ux) * i) / pasos;
+      const py = t.uy + ((y - t.uy) * i) / pasos;
+      const r = pincelar(f.croma, w, h, px, py, radio, t.tono, (k, fuerza) => {
+        const v = Math.round(fuerza * 255);
+        if (capa && v > capa.alfa[k]) capa.alfa[k] = v;
+        for (const o of otras) if (o.alfa[k]) o.alfa[k] = Math.min(o.alfa[k], 255 - v);
+      });
+      if (r) redibujarRegion(r);
+    }
+    t.ux = x;
+    t.uy = y;
+  }
+
+  function empezarTrazo(e: PointerEvent): void {
+    const f = actual!;
+    if (modo === "pincel" && !activo) {
+      avisar("Primero elegí un color.");
+      return;
+    }
+    f.croma ??= cromaFoto(f.original.data, f.original.width, f.original.height);
+    const p = puntoDe(e.clientX, e.clientY);
+    const antes = guardarPaso(f);
+    ultimaOp = null;
+    trazo = {
+      id: e.pointerId,
+      tono: modo === "pincel" ? tonoEn(f.croma, f.original.width, f.original.height, p.x, p.y) : null,
+      borrar: modo === "borrador",
+      codigo: activo?.codigo ?? "",
+      antes,
+      ux: p.x,
+      uy: p.y,
+    };
+    pincelada(p.x, p.y);
+    actualizarBotones();
+  }
+
+  function terminarTrazo(): void {
+    const f = actual;
+    trazo = null;
+    if (!f) return;
+    f.capas = f.capas.filter((c) => c.alfa.some((v) => v > 8));
+    redibujar();
+  }
+
+  lienzo.addEventListener("pointerdown", (e) => {
+    if (!actual) return;
+    try {
+      lienzo.setPointerCapture(e.pointerId);
+    } catch {}
+    punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (punteros.size === 2) {
+      cancelarTrazo();
+      toque = null;
+      const [a, b] = [...punteros.values()];
+      gesto = { d0: Math.hypot(a.x - b.x, a.y - b.y), z0: zoom, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+      return;
+    }
+    if (punteros.size > 2) return;
+    if (esTrazo()) {
+      e.preventDefault();
+      empezarTrazo(e);
+      moverAnillo(e.clientX, e.clientY);
+    } else {
+      toque = { id: e.pointerId, x: e.clientX, y: e.clientY, ux: e.clientX, uy: e.clientY, movio: false };
+    }
+  });
+
+  lienzo.addEventListener("pointermove", (e) => {
+    if (e.pointerType === "mouse" && esTrazo()) moverAnillo(e.clientX, e.clientY);
+    if (!punteros.has(e.pointerId)) return;
+    punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (gesto && punteros.size >= 2) {
+      const [a, b] = [...punteros.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+      marco.scrollLeft -= mx - gesto.mx;
+      marco.scrollTop -= my - gesto.my;
+      gesto.mx = mx;
+      gesto.my = my;
+      if (gesto.d0 > 20) aplicarZoom(gesto.z0 * (d / gesto.d0), mx, my);
+      return;
+    }
+    if (trazo && trazo.id === e.pointerId) {
+      const p = puntoDe(e.clientX, e.clientY);
+      pincelada(p.x, p.y);
+      moverAnillo(e.clientX, e.clientY);
+      return;
+    }
+    if (toque && toque.id === e.pointerId) {
+      if (Math.hypot(e.clientX - toque.x, e.clientY - toque.y) > 8) toque.movio = true;
+      if (toque.movio && zoom > 1) {
+        marco.scrollLeft -= e.clientX - toque.ux;
+        marco.scrollTop -= e.clientY - toque.uy;
+      }
+      toque.ux = e.clientX;
+      toque.uy = e.clientY;
+    }
+  });
+
+  const soltar = (e: PointerEvent) => {
+    punteros.delete(e.pointerId);
+    if (gesto) {
+      if (punteros.size < 2) gesto = null;
+      toque = null;
+      return;
+    }
+    if (trazo && trazo.id === e.pointerId) {
+      terminarTrazo();
+      if (e.pointerType !== "mouse") anillo.classList.add("hidden");
+      return;
+    }
+    if (toque && toque.id === e.pointerId) {
+      const t = toque;
+      toque = null;
+      if (e.type === "pointerup" && !t.movio) void tocarZona(e.clientX, e.clientY);
+    }
+  };
+  lienzo.addEventListener("pointerup", soltar);
+  lienzo.addEventListener("pointercancel", soltar);
+  lienzo.addEventListener("pointerleave", (e) => {
+    if (e.pointerType === "mouse" && !trazo) anillo.classList.add("hidden");
+  });
+
+  async function tocarZona(cx: number, cy: number): Promise<void> {
+    const f = actual;
+    if (!f) return;
+    if (!f.lista) {
       avisar("Esperá un momento: todavía estamos preparando la foto.");
       return;
     }
     if (ocupado) return;
-    if (modo === "pintar" && !activo) {
+    if (modo === "pared" && !activo) {
       avisar("Primero elegí un color.");
       return;
     }
-    const p = puntoDe(e);
+    const p = puntoDe(cx, cy);
     const op = modo;
     const codigo = activo?.codigo ?? "";
-    const id = fotoId;
     marca.style.left = `${p.px}%`;
     marca.style.top = `${p.py}%`;
     marca.classList.remove("hidden");
     ocupado = true;
     actualizarBotones();
-    avisar(op === "pintar" ? "Marcando la pared…" : "Marcando lo que vas a quitar…");
-    const r = await pedir({ tipo: "zona", x: p.x, y: p.y });
+    avisar(op === "pared" ? "Marcando la pared…" : "Marcando lo que vas a quitar…");
+    const r = await pedir({ tipo: "zona", clave: f.clave, x: p.x, y: p.y });
     marca.classList.add("hidden");
     ocupado = false;
-    if (id !== fotoId) return;
+    if (!fotos.includes(f)) return;
     if (r.tipo !== "zona") {
+      if (r.tipo === "sin-foto") {
+        f.lista = false;
+        void analizar(f);
+      }
       avisar("No pudimos marcar esa zona. Probá tocando en otro punto.");
       actualizarBotones();
       return;
     }
-    const antes = guardarPaso();
-    aplicarZona(op, codigo, r.alfa);
-    ultimaOp = { modo: op, codigo, antes, opciones: r.opciones };
-    redibujar();
+    const antes = guardarPaso(f);
+    aplicarZona(f, op, codigo, r.alfa);
+    ultimaOp = { modo: op, codigo, antes, opciones: r.opciones, clave: f.clave };
+    if (actual === f) redibujar();
     avisar(
-      op === "pintar"
-        ? "Si no quedó bien, tocá “Otra forma”. Para sumar más pared, tocá otra parte."
-        : "Listo. Si quitó de más, tocá “Otra forma” o “Deshacer”.",
+      op === "pared"
+        ? "¿Agarró de más o de menos? Tocá “Cambiar recorte” para ver otra opción. Para detalles chiquitos usá el pincel fino."
+        : "Listo. Si quitó de más, tocá “Cambiar recorte” o “Deshacer”.",
     );
+  }
+
+  // ---------- Varias fotos ----------
+  function pintarTira(): void {
+    tiraFotos.innerHTML =
+      fotos
+        .map(
+          (f, i) => `
+      <div class="probador-mini" data-activa="${f === actual}">
+        <button type="button" data-foto="${f.clave}" aria-label="Ver foto ${i + 1}"><img src="${f.mini}" alt="" /></button>
+        <button type="button" data-cerrar-foto="${f.clave}" class="probador-mini-x" aria-label="Quitar foto ${i + 1}">×</button>
+      </div>`,
+        )
+        .join("") +
+      (fotos.length < MAX_FOTOS
+        ? `<label for="probador-archivo-mas" class="probador-mini-mas"><span>+</span>Otra foto</label>`
+        : "");
+  }
+
+  function mostrarFoto(f: Foto): void {
+    actual = f;
+    ultimaOp = ultimaOp?.clave === f.clave ? ultimaOp : null;
+    mostrandoAntes = false;
+    lienzo.width = f.original.width;
+    lienzo.height = f.original.height;
+    ctx.putImageData(f.vista, 0, 0);
+    zoom = 1;
+    caja.style.width = "100%";
+    marco.style.height = "";
+    nivelZoom.textContent = "1×";
+    btnAlejar.disabled = true;
+    btnAcercar.disabled = false;
+    aplicarModo();
+    if (f.lista) {
+      ocultarEstado();
+      avisar(textoModo());
+    } else {
+      mostrarEstado("Analizando tu foto…", -1, "Puede tardar unos segundos.");
+    }
+    redibujar();
+  }
+
+  tiraFotos.addEventListener("click", (e) => {
+    const t = e.target as HTMLElement;
+    const cerrar = t.closest("button[data-cerrar-foto]") as HTMLButtonElement | null;
+    if (cerrar) {
+      const clave = Number(cerrar.dataset.cerrarFoto);
+      const f = fotos.find((x) => x.clave === clave);
+      if (!f) return;
+      fotos = fotos.filter((x) => x !== f);
+      if (worker) void pedir({ tipo: "olvidar", clave });
+      if (ultimaOp?.clave === clave) ultimaOp = null;
+      if (!fotos.length) {
+        actual = null;
+        ocultarEstado();
+        trabajo.classList.add("hidden");
+        inicio.classList.remove("hidden");
+        archivo.value = "";
+        seccion.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      if (actual === f) mostrarFoto(fotos[fotos.length - 1]);
+      else pintarTira();
+      return;
+    }
+    const ver = t.closest("button[data-foto]") as HTMLButtonElement | null;
+    if (ver) {
+      const f = fotos.find((x) => x.clave === Number(ver.dataset.foto));
+      if (f && f !== actual) mostrarFoto(f);
+    }
   });
 
   // ---------- Cargar fotos ----------
@@ -454,85 +855,79 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     }
   }
 
+  async function leerFoto(fuente: Blob): Promise<{ datos: ImageData; mini: string } | null> {
+    const lamina = document.createElement("canvas");
+    const g = lamina.getContext("2d", { willReadFrequently: true })!;
+    for (const sinBitmap of [false, true]) {
+      try {
+        const { img, ancho, alto } = await abrirImagen(fuente, sinBitmap);
+        if (!ancho || !alto) continue;
+        const escala = Math.min(1, LADO_MAX / Math.max(ancho, alto));
+        lamina.width = Math.max(1, Math.round(ancho * escala));
+        lamina.height = Math.max(1, Math.round(alto * escala));
+        g.drawImage(img, 0, 0, lamina.width, lamina.height);
+        (img as ImageBitmap).close?.();
+        const datos = g.getImageData(0, 0, lamina.width, lamina.height);
+        let tiene = false;
+        for (let i = 3; i < datos.data.length; i += 4 * 997) if (datos.data[i] > 0) tiene = true;
+        if (!tiene) continue;
+        const mini = document.createElement("canvas");
+        const em = 160 / Math.max(lamina.width, lamina.height);
+        mini.width = Math.round(lamina.width * em);
+        mini.height = Math.round(lamina.height * em);
+        mini.getContext("2d")!.drawImage(lamina, 0, 0, mini.width, mini.height);
+        return { datos, mini: mini.toDataURL("image/jpeg", 0.7) };
+      } catch {}
+    }
+    return null;
+  }
+
+  function mostrarError(texto: string): void {
+    error.textContent = texto;
+    error.classList.remove("hidden");
+  }
+
   async function cargar(fuente: Blob): Promise<void> {
     error.classList.add("hidden");
-    const dibujar = async (sinBitmap: boolean): Promise<boolean> => {
-      const { img, ancho, alto } = await abrirImagen(fuente, sinBitmap);
-      if (!ancho || !alto) return false;
-      const escala = Math.min(1, LADO_MAX / Math.max(ancho, alto));
-      lienzo.width = Math.max(1, Math.round(ancho * escala));
-      lienzo.height = Math.max(1, Math.round(alto * escala));
-      ctx.drawImage(img, 0, 0, lienzo.width, lienzo.height);
-      (img as ImageBitmap).close?.();
-      original = ctx.getImageData(0, 0, lienzo.width, lienzo.height);
-      const d = original.data;
-      for (let i = 3; i < d.length; i += 4 * 997) if (d[i] > 0) return true;
-      return false;
-    };
-    try {
-      if (!(await dibujar(false)) && !(await dibujar(true))) throw new Error("vacia");
-      vista = ctx.createImageData(lienzo.width, lienzo.height);
-      vista.data.set(original!.data);
-    } catch {
-      error.textContent = "No pudimos abrir esa foto. Probá con otra (JPG o PNG).";
-      error.classList.remove("hidden");
+    if (fotos.length >= MAX_FOTOS) {
+      mostrarError(`Podés trabajar con ${MAX_FOTOS} fotos a la vez. Quitá una para agregar otra.`);
       return;
     }
-    capas = [];
-    historial = [];
-    ultimaOp = null;
-    lista = false;
-    fotoId++;
+    const leida = await leerFoto(fuente);
+    if (!leida) {
+      mostrarError("No pudimos abrir esa foto. Probá con otra (JPG o PNG).");
+      return;
+    }
+    const vista = new ImageData(new Uint8ClampedArray(leida.datos.data), leida.datos.width, leida.datos.height);
+    const f: Foto = { clave: siguienteClave++, original: leida.datos, vista, capas: [], historial: [], lista: false, mini: leida.mini };
+    fotos.push(f);
     inicio.classList.add("hidden");
     trabajo.classList.remove("hidden");
     pintarColores();
-    pintarUsados();
-    actualizarBotones();
-    avisar(activo ? `Cuando termine de cargar, tocá la pared que querés pintar de ${activo.nombre}.` : "Elegí un color y tocá la pared.");
+    mostrarFoto(f);
     trabajo.scrollIntoView({ behavior: "smooth", block: "start" });
-    ultimaFoto = { rgba: new Uint8ClampedArray(original!.data), ancho: lienzo.width, alto: lienzo.height };
-    await analizar();
+    void analizar(f);
   }
 
-  async function analizar(): Promise<void> {
-    if (!ultimaFoto) return;
-    const id = fotoId;
-    lista = false;
-    mostrarEstado("Preparando el detector de paredes…", 0);
-    vigilar(90000, () => {
-      reiniciarWorker();
-      fallo("No pudimos preparar el detector. Revisá tu conexión e intentá de nuevo.");
-    });
-    const copia = new Uint8ClampedArray(ultimaFoto.rgba);
-    const r = await pedir({ tipo: "foto", rgba: copia, ancho: ultimaFoto.ancho, alto: ultimaFoto.alto }, [copia.buffer]);
-    if (id !== fotoId) return;
-    clearTimeout(vigilante);
-    if (r.tipo === "lista") {
-      seccion.dataset.listo = "1";
-      lista = true;
-      ocultarEstado();
-      avisar(activo ? `Listo: tocá la pared que querés pintar de ${activo.nombre}.` : "Listo: elegí un color y tocá la pared.");
-    } else {
-      console.error("probador:", r.mensaje);
-      reiniciarWorker();
-      fallo("No pudimos cargar el detector de paredes. Revisá tu conexión a internet e intentá de nuevo.");
-    }
-  }
-
-  estadoReintentar.addEventListener("click", () => {
-    reiniciarWorker();
-    void analizar();
-  });
-
-  archivo.addEventListener("change", () => {
-    const f = archivo.files?.[0];
-    if (!f) return;
-    if (!f.type.startsWith("image/")) {
-      error.textContent = "Ese archivo no parece una foto. Probá con una imagen JPG o PNG.";
-      error.classList.remove("hidden");
+  async function cargarArchivos(lista: FileList | null): Promise<void> {
+    const archivos = [...(lista ?? [])];
+    if (!archivos.length) return;
+    if (archivos.some((a) => !a.type.startsWith("image/"))) {
+      mostrarError("Ese archivo no parece una foto. Probá con una imagen JPG o PNG.");
       return;
     }
-    void cargar(f);
+    const lugar = MAX_FOTOS - fotos.length;
+    for (const a of archivos.slice(0, Math.max(0, lugar))) await cargar(a);
+    if (archivos.length > lugar) mostrarError(`Podés trabajar con ${MAX_FOTOS} fotos a la vez; se agregaron las primeras ${Math.max(0, lugar)}.`);
+  }
+
+  archivo.addEventListener("change", () => {
+    void cargarArchivos(archivo.files);
+    archivo.value = "";
+  });
+  archivoMas.addEventListener("change", () => {
+    void cargarArchivos(archivoMas.files);
+    archivoMas.value = "";
   });
 
   document.querySelectorAll<HTMLButtonElement>("[data-probador-ejemplo]").forEach((b) =>
@@ -542,44 +937,28 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
         if (!res.ok) throw new Error();
         await cargar(await res.blob());
       } catch {
-        error.textContent = "No pudimos abrir la foto de ejemplo. Revisá tu conexión.";
-        error.classList.remove("hidden");
+        mostrarError("No pudimos abrir la foto de ejemplo. Revisá tu conexión.");
       }
     }),
   );
 
-  btnOtraFoto.addEventListener("click", () => {
-    archivo.value = "";
-    fotoId++;
-    original = null;
-    vista = null;
-    capas = [];
-    historial = [];
-    ultimaOp = null;
-    lista = false;
-    clearTimeout(vigilante);
-    ocultarEstado();
-    trabajo.classList.add("hidden");
-    inicio.classList.remove("hidden");
-    seccion.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-
   // ---------- Descargar ----------
   btnDescargar.addEventListener("click", () => {
-    if (!vista || capas.length === 0) return;
-    const w = vista.width;
-    const h = vista.height;
+    const f = actual;
+    if (!f || f.capas.length === 0) return;
+    const w = f.vista.width;
+    const h = f.vista.height;
     const fila = Math.max(44, Math.round(w / 22));
-    const alturaPie = fila * capas.length + Math.round(fila * 0.9);
+    const alturaPie = fila * f.capas.length + Math.round(fila * 0.9);
     const c = document.createElement("canvas");
     c.width = w;
     c.height = h + alturaPie;
     const g = c.getContext("2d")!;
-    g.putImageData(vista, 0, 0);
+    g.putImageData(f.vista, 0, 0);
     g.fillStyle = "#fff8f0";
     g.fillRect(0, h, w, alturaPie);
     const margen = Math.round(fila * 0.4);
-    capas.forEach((capa, i) => {
+    f.capas.forEach((capa, i) => {
       const y = h + margen + i * fila;
       g.fillStyle = capa.color.hex;
       g.fillRect(margen, y, fila * 0.8, fila * 0.8);
@@ -598,7 +977,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "mi-color-super-color.jpg";
+        a.download = `mi-color-super-color-${fotos.indexOf(f) + 1}.jpg`;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -619,10 +998,10 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       if (!nuevos.length) return;
       extras = [...nuevos, ...extras.filter((x) => !nuevos.some((n) => n.codigo === x.codigo))];
       activo = nuevos[0];
-      modo = "pintar";
+      if (modo === "borrador" || modo === "quitar") modo = "pared";
       aplicarModo();
       pintarColores();
-      if (original) avisar(`Tocá la pared que querés pintar de ${activo.nombre}.`);
+      if (actual) avisar(textoModo());
       const preparados = document.getElementById("probador-preparados");
       if (preparados) {
         preparados.innerHTML = `<span class="flex -space-x-2">${nuevos
@@ -631,7 +1010,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
         preparados.classList.remove("hidden");
         preparados.classList.add("flex");
       }
-      (original ? trabajo : seccion).scrollIntoView({ behavior: "smooth", block: "start" });
+      (actual ? trabajo : seccion).scrollIntoView({ behavior: "smooth", block: "start" });
     },
   };
 }

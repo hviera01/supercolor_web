@@ -11,6 +11,7 @@ export interface ColorCapa {
 export interface CapaPintura {
   color: ColorCapa;
   alfa: Uint8Array;
+  ref?: number;
 }
 
 const LINEAL = new Float32Array(256);
@@ -424,29 +425,38 @@ export function luzDeReferencia(rgba: Uint8ClampedArray | Uint8Array, alfa: Uint
   return 0.5;
 }
 
+export interface Region {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
 /** Pinta las capas sobre la foto original. Cada píxel toma el color del
- * abanico multiplicado por cuánta luz le llegaba en la foto. */
+ * abanico multiplicado por cuánta luz le llegaba en la foto. Con `region`
+ * solo se repinta ese rectángulo (para el pincel, que va trazo a trazo). */
 export function pintarCapas(
   original: Uint8ClampedArray | Uint8Array,
   capas: CapaPintura[],
   destino: Uint8ClampedArray,
+  ancho = 0,
+  region?: Region,
 ): void {
-  destino.set(original);
-  for (const capa of capas) {
-    const ref = luzDeReferencia(original, capa.alfa);
-    const tr = aLineal(capa.color.r);
-    const tg = aLineal(capa.color.g);
-    const tb = aLineal(capa.color.b);
-    const a = capa.alfa;
-    for (let k = 0, i = 0; k < a.length; k++, i += 4) {
-      const al = a[k];
+  const prep = capas.map((capa) => {
+    const ref = capa.ref ?? luzDeReferencia(original, capa.alfa);
+    return { a: capa.alfa, ref, tr: aLineal(capa.color.r), tg: aLineal(capa.color.g), tb: aLineal(capa.color.b) };
+  });
+  const pixel = (k: number): void => {
+    const i = k * 4;
+    for (const c of prep) {
+      const al = c.a[k];
       if (!al) continue;
-      let s = luminanciaLineal(original, i) / ref;
+      let s = luminanciaLineal(original, i) / c.ref;
       if (s > 1) s = 1 + (s - 1) * 0.6;
       if (s > 1.5) s = 1.5;
-      let r = tr * s;
-      let g = tg * s;
-      let b = tb * s;
+      let r = c.tr * s;
+      let g = c.tg * s;
+      let b = c.tb * s;
       const exceso = Math.max(r, g, b);
       if (exceso > 1) {
         const m = Math.min(1, (exceso - 1) * 1.5);
@@ -459,5 +469,78 @@ export function pintarCapas(
       destino[i + 1] = destino[i + 1] * (1 - f) + aSrgb(g) * f;
       destino[i + 2] = destino[i + 2] * (1 - f) + aSrgb(b) * f;
     }
+  };
+  if (!region || !ancho) {
+    destino.set(original);
+    const n = original.length / 4;
+    for (let k = 0; k < n; k++) pixel(k);
+    return;
   }
+  for (let y = region.y0; y <= region.y1; y++) {
+    for (let x = region.x0; x <= region.x1; x++) {
+      const k = y * ancho + x;
+      const i = k * 4;
+      destino[i] = original[i];
+      destino[i + 1] = original[i + 1];
+      destino[i + 2] = original[i + 2];
+      destino[i + 3] = original[i + 3];
+      pixel(k);
+    }
+  }
+}
+
+export interface Tono {
+  r: number;
+  g: number;
+  luz: number;
+  oscuro: boolean;
+}
+
+/** Tono de la superficie en un punto (mediana de un cuadrito alrededor). */
+export function tonoEn(croma: CromaFoto, ancho: number, alto: number, x: number, y: number): Tono {
+  const px = Math.max(0, Math.min(ancho - 1, Math.round(x)));
+  const py = Math.max(0, Math.min(alto - 1, Math.round(y)));
+  if (croma.oscuro[py * ancho + px]) return { r: 1 / 3, g: 1 / 3, luz: croma.luz[py * ancho + px], oscuro: true };
+  const t = tonoDeReferencia(croma, ancho, alto, px, py);
+  return { r: t.r, g: t.g, luz: t.luz, oscuro: false };
+}
+
+/** Un toque del pincel fino: marca los píxeles del círculo. Si se le da un
+ * tono, solo marca los que son de esa misma superficie (no se sale a la
+ * pared de al lado aunque el pincel la toque). Devuelve el rectángulo tocado. */
+export function pincelar(
+  croma: CromaFoto,
+  ancho: number,
+  alto: number,
+  cx: number,
+  cy: number,
+  radio: number,
+  tono: Tono | null,
+  marcar: (k: number, fuerza: number) => void,
+): Region | null {
+  const x0 = Math.max(0, Math.floor(cx - radio - 1));
+  const y0 = Math.max(0, Math.floor(cy - radio - 1));
+  const x1 = Math.min(ancho - 1, Math.ceil(cx + radio + 1));
+  const y1 = Math.min(alto - 1, Math.ceil(cy + radio + 1));
+  if (x0 > x1 || y0 > y1) return null;
+  const limite = 0.1;
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const d = Math.hypot(x - cx, y - cy);
+      const fuerza = Math.max(0, Math.min(1, radio - d + 0.5));
+      if (fuerza <= 0) continue;
+      const k = y * ancho + x;
+      if (tono) {
+        if (croma.oscuro[k] !== (tono.oscuro ? 1 : 0)) continue;
+        if (!tono.oscuro) {
+          const proporcion = croma.luz[k] / Math.max(1e-4, tono.luz);
+          if (proporcion < 0.25 || proporcion > 3) continue;
+          const cambio = Math.min(1, Math.abs(Math.log(Math.max(1e-4, proporcion))) / LOG3);
+          if (Math.hypot(croma.cr[k] - tono.r, croma.cg[k] - tono.g) > limite * (1 + cambio)) continue;
+        }
+      }
+      marcar(k, fuerza);
+    }
+  }
+  return { x0, y0, x1, y1 };
 }
