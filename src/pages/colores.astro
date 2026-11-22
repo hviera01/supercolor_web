@@ -351,6 +351,15 @@ import CTABand from "../components/CTABand.astro";
               <button id="probador-acercar" type="button" aria-label="Acercar">+</button>
             </div>
           </div>
+          <div id="probador-propuesta" class="probador-propuesta hidden" role="group" aria-label="Confirmar la zona">
+              <p id="probador-propuesta-texto" class="text-xs font-bold leading-snug">Lo azul es lo que se va a pintar.</p>
+              <div class="mt-2 flex flex-wrap gap-1.5">
+                <button id="probador-prop-si" type="button" class="probador-prop probador-prop-si">Pintar esta zona</button>
+                <button id="probador-prop-otra" type="button" class="probador-prop">Otra forma</button>
+                <button id="probador-prop-marcar" type="button" class="probador-prop">Marcar a mano</button>
+                <button id="probador-prop-no" type="button" class="probador-prop">Cancelar</button>
+              </div>
+            </div>
           <p id="probador-aviso" class="mt-2 min-h-[1.25rem] text-sm font-semibold text-tinta-700" aria-live="polite"></p>
 
           <div class="mt-2 flex flex-wrap items-center gap-2">
@@ -882,6 +891,37 @@ import CTABand from "../components/CTABand.astro";
   .probador-mini-mas:hover {
     border-color: var(--color-cielo-500);
     color: var(--color-cielo-600);
+  }
+  .probador-propuesta {
+    margin-top: 0.5rem;
+    scroll-margin-bottom: 1rem;
+    border-radius: 0.9rem;
+    background: rgb(26 26 26 / 0.9);
+    padding: 0.6rem 0.7rem 0.7rem;
+    color: var(--color-crema-50);
+    box-shadow: 0 6px 18px rgb(26 26 26 / 0.35);
+  }
+  .probador-prop {
+    border-radius: 0.6rem;
+    border: 1px solid rgb(255 255 255 / 0.3);
+    padding: 0.45rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-crema-50);
+  }
+  .probador-prop:hover:not(:disabled) {
+    background: rgb(255 255 255 / 0.12);
+  }
+  .probador-prop:disabled {
+    opacity: 0.45;
+  }
+  .probador-prop-si {
+    border-color: transparent;
+    background: var(--color-sol-400);
+    color: var(--color-tinta-900);
+  }
+  .probador-prop-si:hover:not(:disabled) {
+    background: var(--color-sol-300);
   }
   .probador-interruptor {
     display: flex;

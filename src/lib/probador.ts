@@ -97,6 +97,12 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   const capaLimite = $<HTMLCanvasElement>("probador-limite");
   const ctxLimite = capaLimite.getContext("2d")!;
   const btnQuitarLimite = $<HTMLButtonElement>("probador-limite-quitar");
+  const cajaPropuesta = $("probador-propuesta");
+  const textoPropuesta = $("probador-propuesta-texto");
+  const btnPropSi = $<HTMLButtonElement>("probador-prop-si");
+  const btnPropOtra = $<HTMLButtonElement>("probador-prop-otra");
+  const btnPropMarcar = $<HTMLButtonElement>("probador-prop-marcar");
+  const btnPropNo = $<HTMLButtonElement>("probador-prop-no");
   const error = $("probador-error");
   const ctx = lienzo.getContext("2d", { willReadFrequently: true })!;
 
@@ -354,6 +360,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   botonesModo.forEach((b) =>
     b.addEventListener("click", () => {
       const nuevo = b.dataset.probadorModo as Modo;
+      cerrarPropuesta();
       if (nuevo === "marcar" && modo !== "marcar") modoPrevio = modo;
       modo = nuevo;
       aplicarModo();
@@ -818,6 +825,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       ctxLimite.putImageData(img, 0, 0);
       sombraLimite = { lim: f.limite, img };
     }
+    if (propuesta && propuesta.f === f && propuesta.img) ctxLimite.drawImage(propuesta.img, 0, 0);
     if (lazo && lazo.pts.length > 1) {
       ctxLimite.save();
       ctxLimite.lineJoin = "round";
@@ -1052,16 +1060,133 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
         return;
       }
     }
-    const antes = guardarPaso(f);
-    aplicarZona(f, op, codigo, r.alfa);
-    ultimaOp = { modo: op, codigo, antes, opciones: r.opciones, clave: f.clave };
-    if (actual === f) redibujar();
-    avisar(
-      op === "pared"
-        ? "¿Agarró de más o de menos? Tocá “Cambiar recorte” para ver otra opción. Para detalles chiquitos usá el pincel fino."
-        : "Listo. Si quitó de más, tocá “Cambiar recorte” o “Deshacer”.",
-    );
+    proponer({ f, op, codigo, alfa: recortarAlLimite(f, r.alfa), opciones: r.opciones });
   }
+
+  // ---------- Vista previa de la zona antes de pintar ----------
+  let propuesta: { f: Foto; op: Modo; codigo: string; alfa: Uint8Array; opciones: number; img?: HTMLCanvasElement } | null = null;
+
+  function recortarAlLimite(f: Foto, alfa: Uint8Array): Uint8Array {
+    if (!f.limite) return alfa;
+    const lim = f.limite;
+    return alfa.map((v, k) => (v * lim[k]) / 255);
+  }
+
+  function imagenPropuesta(p: NonNullable<typeof propuesta>): HTMLCanvasElement {
+    const W = capaLimite.width;
+    const H = capaLimite.height;
+    const ow = p.f.original.width;
+    const oh = p.f.original.height;
+    const esc = W / ow;
+    const c = document.createElement("canvas");
+    c.width = W;
+    c.height = H;
+    const cx = c.getContext("2d")!;
+    const img = cx.createImageData(W, H);
+    const quitar = p.op === "quitar";
+    const muestra = (x: number, y: number) => {
+      const sx = Math.min(ow - 1, Math.max(0, Math.floor(x / esc)));
+      const sy = Math.min(oh - 1, Math.max(0, Math.floor(y / esc)));
+      return p.alfa[sy * ow + sx];
+    };
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const a = muestra(x, y);
+        if (a < 40) continue;
+        const borde = muestra(x - 1, y) < 128 || muestra(x + 1, y) < 128 || muestra(x, y - 1) < 128 || muestra(x, y + 1) < 128;
+        const i = (y * W + x) * 4;
+        if (borde && a >= 128) {
+          img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+          img.data[i + 3] = 255;
+        } else {
+          img.data[i] = quitar ? 220 : 30;
+          img.data[i + 1] = quitar ? 50 : 125;
+          img.data[i + 2] = quitar ? 50 : 235;
+          img.data[i + 3] = Math.round(a * 0.5);
+        }
+      }
+    }
+    cx.putImageData(img, 0, 0);
+    return c;
+  }
+
+  function proponer(p: NonNullable<typeof propuesta>): void {
+    propuesta = p;
+    if (actual !== p.f) return;
+    p.img = imagenPropuesta(p);
+    dibujarLimite();
+    const quitar = p.op === "quitar";
+    textoPropuesta.textContent = quitar
+      ? "Lo rojo es lo que se va a quitar. ¿Está bien?"
+      : "Lo azul es lo que se va a pintar. ¿Está bien?";
+    btnPropSi.textContent = quitar ? "Quitar esta zona" : "Pintar esta zona";
+    btnPropOtra.disabled = p.opciones <= 1;
+    btnPropSi.disabled = false;
+    cajaPropuesta.classList.remove("hidden");
+    requestAnimationFrame(() => {
+      const r = cajaPropuesta.getBoundingClientRect();
+      if (r.bottom > window.innerHeight - 8) cajaPropuesta.scrollIntoView({ block: "end", behavior: "smooth" });
+    });
+    avisar(
+      quitar
+        ? "Revisá lo marcado en rojo antes de quitarlo."
+        : "Revisá lo marcado en azul antes de pintar. Si agarra de más o de menos, probá “Otra forma” o “Marcar a mano”.",
+    );
+    actualizarBotones();
+  }
+
+  function cerrarPropuesta(): void {
+    if (!propuesta) return;
+    propuesta = null;
+    cajaPropuesta.classList.add("hidden");
+    dibujarLimite();
+    actualizarBotones();
+  }
+
+  btnPropSi.addEventListener("click", () => {
+    const p = propuesta;
+    if (!p || ocupado) return;
+    cerrarPropuesta();
+    guardarPaso(p.f);
+    aplicarZona(p.f, p.op, p.codigo, p.alfa);
+    ultimaOp = null;
+    if (actual === p.f) redibujar();
+    avisar(p.op === "pared" ? "Pintado. Tocá otra parte para seguir, o usá el pincel fino para los detalles." : "Listo, se quitó esa zona.");
+  });
+
+  btnPropOtra.addEventListener("click", async () => {
+    const p = propuesta;
+    if (!p || ocupado) return;
+    ocupado = true;
+    btnPropOtra.disabled = true;
+    btnPropSi.disabled = true;
+    textoPropuesta.textContent = "Buscando otra forma…";
+    const r = await pedir({ tipo: "otra", clave: p.f.clave });
+    ocupado = false;
+    if (propuesta !== p) return;
+    if (r.tipo === "zona") proponer({ ...p, alfa: recortarAlLimite(p.f, r.alfa), opciones: r.opciones, img: undefined });
+    else {
+      btnPropOtra.disabled = false;
+      btnPropSi.disabled = false;
+      textoPropuesta.textContent = p.op === "quitar" ? "Lo rojo es lo que se va a quitar. ¿Está bien?" : "Lo azul es lo que se va a pintar. ¿Está bien?";
+      avisar("No hay otra forma para ese toque. Probá “Marcar a mano”.");
+    }
+  });
+
+  btnPropMarcar.addEventListener("click", () => {
+    if (!propuesta) return;
+    const previo = propuesta.op;
+    cerrarPropuesta();
+    modoPrevio = previo;
+    modo = "marcar";
+    aplicarModo();
+    avisar(textoModo());
+  });
+
+  btnPropNo.addEventListener("click", () => {
+    cerrarPropuesta();
+    avisar(textoModo());
+  });
 
   // ---------- Varias fotos ----------
   function pintarTira(): void {
@@ -1088,6 +1213,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     lienzo.height = f.original.height;
     ctx.putImageData(f.vista, 0, 0);
     lazo = null;
+    if (propuesta && propuesta.f !== f) cerrarPropuesta();
     prepararCapaLimite(f);
     zoom = 1;
     caja.style.width = "100%";
