@@ -13,6 +13,7 @@ export interface ContextoModalColor {
   /** Paleta completa, para calcular los colores parecidos. */
   paleta: ColorEnriquecido[];
   alCombinar: (color: ColorEnriquecido) => void;
+  alProbar?: (color: ColorEnriquecido) => void;
   /** Se llama cada vez que el modal pasa a mostrar otro color (para que la
    * página de atrás se mantenga sincronizada con lo que se está viendo). */
   alMostrar?: (color: ColorEnriquecido) => void;
@@ -95,6 +96,13 @@ function crearModal(): HTMLDivElement {
           >
             Ver ideas para combinarlo
           </button>
+          <button
+            type="button"
+            data-modal-probar
+            class="rounded-2xl bg-tinta-900 py-3.5 text-sm font-bold text-crema-50 shadow-sm transition-transform hover:-translate-y-0.5 hover:bg-tinta-700 sm:col-span-2"
+          >
+            Probarlo en una foto de tu casa
+          </button>
         </div>
 
         <div class="mt-6">
@@ -120,6 +128,12 @@ function crearModal(): HTMLDivElement {
   el.querySelector("[data-modal-combinar]")?.addEventListener("click", () => {
     if (colorActual && contexto) contexto.alCombinar(colorActual);
     cerrarModalColor();
+  });
+  el.querySelector("[data-modal-probar]")?.addEventListener("click", () => {
+    const color = colorActual;
+    const fn = contexto?.alProbar;
+    cerrarModalColor();
+    if (color && fn) fn(color);
   });
   el.querySelector("[data-modal-parecidos]")?.addEventListener("click", (e) => {
     const boton = (e.target as HTMLElement).closest("button[data-codigo]") as HTMLButtonElement | null;

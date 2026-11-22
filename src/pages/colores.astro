@@ -254,6 +254,7 @@ import CTABand from "../components/CTABand.astro";
 
       <div class="mt-8 blob-corner border border-tinta-900/5 bg-crema-50 p-5 shadow-sm sm:p-7">
         <div id="probador-inicio">
+          <div id="probador-preparados" class="mb-4 hidden items-center gap-3 rounded-xl bg-cielo-500/10 px-4 py-3 text-sm font-semibold text-tinta-900"></div>
           <label
             for="probador-archivo"
             class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-tinta-900/15 bg-crema-100 px-6 py-10 text-center transition-colors hover:border-cielo-500 hover:bg-crema-200"
@@ -318,10 +319,10 @@ import CTABand from "../components/CTABand.astro";
           <div class="relative mt-3 overflow-hidden rounded-2xl bg-tinta-900/5">
             <canvas id="probador-canvas" class="block w-full select-none" style="touch-action: manipulation" aria-label="Tu foto: tocá la pared que querés pintar"></canvas>
             <div id="probador-marca" class="probador-marca hidden" aria-hidden="true"></div>
-            <div id="probador-estado" class="absolute inset-0 hidden flex-col items-center justify-center gap-3 bg-tinta-900/60 px-6 text-center text-sm font-bold text-crema-50 backdrop-blur-[2px]">
+            <div id="probador-estado" class="pointer-events-none absolute inset-x-2 top-2 hidden flex-col items-center gap-2 rounded-xl bg-tinta-900/85 px-4 py-2.5 text-center text-xs font-bold text-crema-50 shadow-lg sm:inset-x-auto sm:left-1/2 sm:w-80 sm:-translate-x-1/2">
               <p id="probador-estado-texto"></p>
-              <div class="h-2 w-48 overflow-hidden rounded-full bg-crema-50/25"><div id="probador-estado-barra" class="h-full w-0 rounded-full bg-sol-400 transition-[width]"></div></div>
-              <button id="probador-reintentar" type="button" class="hidden rounded-xl bg-crema-50 px-4 py-2 text-xs font-bold text-tinta-900">Intentar de nuevo</button>
+              <div class="h-1.5 w-full overflow-hidden rounded-full bg-crema-50/25"><div id="probador-estado-barra" class="h-full w-0 rounded-full bg-sol-400 transition-[width]"></div></div>
+              <button id="probador-reintentar" type="button" class="pointer-events-auto hidden rounded-lg bg-crema-50 px-4 py-1.5 text-xs font-bold text-tinta-900">Intentar de nuevo</button>
             </div>
           </div>
           <p id="probador-aviso" class="mt-2 min-h-[1.25rem] text-sm font-semibold text-tinta-700" aria-live="polite"></p>
@@ -1754,6 +1755,10 @@ import CTABand from "../components/CTABand.astro";
         cerrarPanel();
         elegirColorCombinador(c);
       },
+      alProbar: (c) => {
+        cerrarPanel();
+        probador.probarColores([c]);
+      },
     });
   }
 
@@ -2000,7 +2005,10 @@ import CTABand from "../components/CTABand.astro";
         </button>
         <p class="mt-1.5 text-[11px] capitalize text-brand-600">${escapeHtml(s.tipo)}</p>
         <p class="mt-1 text-[11px] leading-snug text-tinta-600">${escapeHtml(s.descripcion)}</p>
-        <button type="button" data-codigo="${escapeHtml(s.color.codigo)}" class="mt-2 text-[11px] font-bold text-tinta-700 underline decoration-tinta-900/20 underline-offset-2 hover:text-brand-600">Ver en grande</button>
+        <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+          <button type="button" data-probar-combo="${escapeHtml(s.color.codigo)}" class="text-[11px] font-bold text-cielo-600 underline decoration-cielo-500/30 underline-offset-2 hover:text-cielo-700">Probar en foto</button>
+          <button type="button" data-codigo="${escapeHtml(s.color.codigo)}" class="text-[11px] font-bold text-tinta-700 underline decoration-tinta-900/20 underline-offset-2 hover:text-brand-600">Ver en grande</button>
+        </div>
       </div>`;
   }
 
@@ -2084,6 +2092,12 @@ import CTABand from "../components/CTABand.astro";
   let sugerenciasActuales: ColorEnriquecido[] = [];
   comboResultado.addEventListener("click", (e) => {
     const destino = e.target as HTMLElement;
+    const probarCombo = destino.closest("button[data-probar-combo]") as HTMLButtonElement | null;
+    if (probarCombo) {
+      const c = porCodigo.get(probarCombo.dataset.probarCombo!);
+      if (c && colorElegido) probador.probarColores([colorElegido, c]);
+      return;
+    }
     const elegir = destino.closest("button[data-elegir-combo]") as HTMLButtonElement | null;
     if (elegir) {
       const c = porCodigo.get(elegir.dataset.elegirCombo!);

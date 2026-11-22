@@ -18,7 +18,7 @@ const MODELO = "Xenova/slimsam-77-uniform";
 env.allowLocalModels = false;
 
 type Entrada =
-  | { tipo: "foto"; id: number; rgba: Uint8ClampedArray; ancho: number; alto: number }
+  | { tipo: "foto"; id: number; rgba: Uint8ClampedArray; ancho: number; alto: number; soloCpu?: boolean }
   | { tipo: "zona"; id: number; x: number; y: number }
   | { tipo: "otra"; id: number };
 
@@ -55,6 +55,7 @@ let usaGpu = false;
 
 async function gpuDisponible(): Promise<"fp16" | "fp32" | null> {
   try {
+    if ((self as any).crossOriginIsolated) return null;
     const gpu = (navigator as any).gpu;
     if (!gpu) return null;
     const adaptador = await gpu.requestAdapter();
@@ -83,10 +84,12 @@ async function cargarEn(gpu: "fp16" | "fp32" | null) {
   return SamModel.from_pretrained(MODELO, { dtype: "q8", device: "wasm", progress_callback: progreso });
 }
 
+let soloCpu = false;
+
 function cargarModelo(): Promise<void> {
   if (cargando) return cargando;
   cargando = (async () => {
-    const gpu = await gpuDisponible();
+    const gpu = soloCpu ? null : await gpuDisponible();
     procesador ??= await AutoProcessor.from_pretrained(MODELO, { progress_callback: progreso });
     if (gpu) {
       try {
@@ -118,7 +121,7 @@ async function prepararFoto(rgba: Uint8ClampedArray, w: number, h: number): Prom
     rgb[k * 3 + 2] = rgba[i + 2];
   }
   const imagen = new RawImage(rgb, w, h, 3);
-  ctx.postMessage({ tipo: "analizando" });
+  ctx.postMessage({ tipo: "analizando", motor: usaGpu ? "gpu" : "cpu" });
   entradas = await (procesador as any)(imagen);
   try {
     embeddings = await (modelo as any).get_image_embeddings(entradas);
@@ -171,6 +174,7 @@ ctx.onmessage = async (e: MessageEvent<Entrada>) => {
   try {
     if (m.tipo === "foto") {
       fotoId = m.id;
+      if (m.soloCpu) soloCpu = true;
       await prepararFoto(m.rgba, m.ancho, m.alto);
       if (fotoId === m.id) ctx.postMessage({ tipo: "lista", id: m.id, motor: usaGpu ? "gpu" : "cpu" });
     } else if (m.tipo === "zona") {
