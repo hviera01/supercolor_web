@@ -81,18 +81,35 @@ test("combinarZonas suma y resta", () => {
 });
 
 test("filtrarPorTono deja afuera una puerta de madera pegada a la pared", () => {
-  const w = 60, h = 40;
+  const w = 300, h = 400;
   const foto = imagen(w, h, (x, y) => {
-    if (x >= 20 && x < 35) return [180, 130, 70];
-    return y > 25 ? [150, 75, 60] : [230, 115, 90];
+    if (x >= 100 && x < 175) return [180, 130, 70];
+    const t = Math.min(1, Math.max(0, (y - 200) / 10));
+    return [230 - 80 * t, 115 - 40 * t, 90 - 30 * t];
   });
   const croma = cromaFoto(foto, w, h);
   const todo = new Float32Array(w * h).fill(1);
-  const { mascara } = filtrarPorTono(todo, croma, w, h, 5, 10);
-  assert.equal(mascara[10 * w + 5], 1);
-  assert.equal(mascara[30 * w + 5], 1, "la parte en sombra de la pared sí se pinta");
-  assert.equal(mascara[10 * w + 25], 0, "la puerta no se pinta");
-  assert.equal(mascara[10 * w + 50], 0, "la pared del otro lado de la puerta queda separada: se pinta con otro toque");
+  const { mascara } = filtrarPorTono(todo, croma, w, h, 25, 100);
+  assert.equal(mascara[100 * w + 25], 1);
+  assert.equal(mascara[300 * w + 25], 1, "la parte en sombra de la pared sí se pinta");
+  assert.equal(mascara[100 * w + 125], 0, "la puerta no se pinta");
+  assert.equal(mascara[100 * w + 250], 0, "la pared del otro lado de la puerta queda separada: se pinta con otro toque");
+});
+
+test("filtrarPorTono no pasa a un recuadro de otro tono de luz ni a una cerámica con dibujo", () => {
+  const w = 120, h = 90;
+  const foto = imagen(w, h, (x, y) => {
+    if (y >= 60) return (Math.floor(x / 3) + Math.floor(y / 3)) % 2 ? [150, 105, 92] : [128, 88, 78];
+    if (x >= 40 && x < 80 && y >= 15 && y < 50) return [215, 190, 172];
+    return [140, 98, 85];
+  });
+  const croma = cromaFoto(foto, w, h);
+  const todo = new Float32Array(w * h).fill(1);
+  const { mascara } = filtrarPorTono(todo, croma, w, h, 20, 30);
+  assert.equal(mascara[30 * w + 20], 1, "la columna tocada se pinta");
+  assert.equal(mascara[30 * w + 100], 1, "la otra columna, unida por arriba, también");
+  assert.equal(mascara[30 * w + 60], 0, "el recuadro claro no");
+  assert.equal(mascara[75 * w + 60], 0, "la cerámica del zócalo no");
 });
 
 test("ordenarOpciones prefiere la forma de un solo tono con mejor puntaje", () => {

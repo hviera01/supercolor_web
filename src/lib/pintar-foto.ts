@@ -190,6 +190,7 @@ export interface CromaFoto {
   /** Logaritmo de la luz, apenas suavizado: para detectar saltos bruscos (bordes). */
   logLuz: Float32Array;
   oscuro: Uint8Array;
+  textura: Float32Array;
 }
 
 /** Tono de cada píxel sin importar cuánta luz le llega (cromaticidad rg): una
@@ -217,7 +218,19 @@ export function cromaFoto(rgba: Uint8ClampedArray | Uint8Array, ancho: number, a
   const log = new Float32Array(n);
   for (let k = 0; k < n; k++) log[k] = Math.log(Math.max(0.004, luz[k]));
   const logLuz = cajaPromedio(log, ancho, alto, 1);
-  return { cr, cg, luz, logLuz, oscuro };
+  // Cuánto dibujo fino tiene cada parte: una cerámica con diseño, ladrillo o
+  // piedra tiene muchos cambios suaves de luz juntos; una pared lisa casi
+  // ninguno. Los saltos fuertes (un cable, un borde) no cuentan.
+  const marcas = new Float32Array(n);
+  for (let yy = 0; yy < alto - 1; yy++) {
+    for (let xx = 0; xx < ancho - 1; xx++) {
+      const k = yy * ancho + xx;
+      const s = Math.max(Math.abs(logLuz[k + 1] - logLuz[k]), Math.abs(logLuz[k + ancho] - logLuz[k]));
+      if (s > 0.06 && s < 0.2) marcas[k] = 1;
+    }
+  }
+  const textura = cajaPromedio(marcas, ancho, alto, Math.max(4, Math.round(Math.min(ancho, alto) / 40)));
+  return { cr, cg, luz, logLuz, oscuro, textura };
 }
 
 function tonoDeReferencia(
@@ -308,29 +321,51 @@ export function filtrarPorTono(
   // Lo muy oscuro (cables, sombras duras) se puede cruzar solo en tramos
   // cortos: así una pared cortada por un cable sigue entera, pero la zona no
   // se mete por una reja o un vidrio oscuro.
-  const maxOscuro = Math.max(4, Math.round(Math.min(ancho, alto) / 120));
-  const racha = new Uint8Array(n);
-  // En superficies casi sin color (blancos, grises, beiges) el tono no separa
-  // la pared del marco blanco o del piso: ahí la zona no cruza saltos bruscos
-  // de luz (bordes), aunque sí las sombras suaves.
-  const neutra = Math.hypot(ref.r - 1 / 3, ref.g - 1 / 3) < 0.045;
+  // Un salto brusco de luz es un borde (un recuadro de otro color, el zócalo
+  // de cerámica, un marco): la zona no lo cruza. Las sombras suaves sí, porque
+  // la luz cambia de a poco. Una línea fina (un cable o su sombra) se puede
+  // cruzar en un tramo corto para seguir del otro lado, pero ese tramo no se
+  // pinta salvo que sea muy oscuro.
+  const maxCruce = Math.max(4, Math.round(Math.min(ancho, alto) / 120));
   const saltoMax = 0.15;
+  // Tampoco se mete en algo con mucho más dibujo que donde se tocó (de una
+  // columna lisa a la cerámica del zócalo, aunque tengan el mismo tono).
+  const texturaRef = croma.textura[inicio];
+  const texturaMax = Math.max(0.42, texturaRef * 1.5 + 0.15);
+  const SIN = 0xffff;
+  const racha = new Uint16Array(n).fill(SIN);
+  const nivel = new Float32Array(n);
   pila[tope++] = semilla;
-  salida[semilla] = 1;
+  racha[semilla] = 0;
+  nivel[semilla] = croma.logLuz[semilla];
   while (tope) {
     const k = pila[--tope];
     const px = k % ancho;
-    const base = racha[k];
+    const rk = racha[k];
     const vecinos = [px > 0 ? k - 1 : -1, px < ancho - 1 ? k + 1 : -1, k >= ancho ? k - ancho : -1, k + ancho < n ? k + ancho : -1];
     for (const v of vecinos) {
-      if (v < 0 || !ok[v] || salida[v]) continue;
-      if (neutra && !croma.oscuro[v] && !croma.oscuro[k] && Math.abs(croma.logLuz[v] - croma.logLuz[k]) > saltoMax) continue;
-      const nueva = croma.oscuro[v] ? base + 1 : 0;
-      if (nueva > maxOscuro) continue;
+      if (v < 0 || !ok[v] || croma.textura[v] > texturaMax) continue;
+      let nueva: number;
+      let nv: number;
+      if (croma.oscuro[v]) {
+        nueva = rk + 1;
+        nv = nivel[k];
+      } else if (Math.abs(croma.logLuz[v] - nivel[k]) <= saltoMax) {
+        nueva = 0;
+        nv = croma.logLuz[v];
+      } else {
+        nueva = rk + 1;
+        nv = nivel[k];
+      }
+      if (nueva > maxCruce || nueva >= racha[v]) continue;
       racha[v] = nueva;
-      salida[v] = 1;
+      nivel[v] = nv;
       pila[tope++] = v;
     }
+  }
+  for (let k = 0; k < n; k++) {
+    if (racha[k] === SIN) continue;
+    if (racha[k] === 0 || croma.oscuro[k]) salida[k] = 1;
   }
   return { mascara: salida, parecido };
 }
