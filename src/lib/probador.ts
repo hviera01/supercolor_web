@@ -101,7 +101,9 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   const zonaFoto = $("probador-zona-foto");
   const textoPropuesta = $("probador-propuesta-texto");
   const btnPropSi = $<HTMLButtonElement>("probador-prop-si");
-  const btnPropOtra = $<HTMLButtonElement>("probador-prop-otra");
+  const btnPropMas = $<HTMLButtonElement>("probador-prop-mas");
+  const btnPropMenos = $<HTMLButtonElement>("probador-prop-menos");
+  const chipLimite = $("probador-limite-chip");
   const btnPropMarcar = $<HTMLButtonElement>("probador-prop-marcar");
   const btnPropNo = $<HTMLButtonElement>("probador-prop-no");
   const error = $("probador-error");
@@ -376,7 +378,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     btnOtra.classList.toggle("hidden", !conOtra);
     btnOtra.disabled = ocupado;
     btnDescargar.disabled = capas.length === 0;
-    btnQuitarLimite.classList.toggle("hidden", !actual?.limite);
+    chipLimite.classList.toggle("hidden", !actual?.limite);
     btnAntes.disabled = capas.length === 0;
   }
 
@@ -1069,16 +1071,16 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       let adentro = false;
       for (let k = 0; k < lim.length && !adentro; k += 7) if (lim[k] > 128 && r.alfa[k] > 128) adentro = true;
       if (!adentro) {
-        avisar("Tocaste fuera del área marcada. Tocá adentro, o “Quitar área marcada” para pintar en otro lado.");
+        avisar("Tocaste fuera del área marcada. Tocá adentro, o “Listo” (arriba en la foto) para pintar en otro lado.");
         actualizarBotones();
         return;
       }
     }
-    proponer({ f, op, codigo, alfa: recortarAlLimite(f, r.alfa), opciones: r.opciones, ancla: { cx, cy } });
+    proponer({ f, op, codigo, alfa: recortarAlLimite(f, r.alfa), opciones: r.opciones, hayMas: r.hayMas, hayMenos: r.hayMenos, ancla: { cx, cy } });
   }
 
   // ---------- Vista previa de la zona antes de pintar ----------
-  let propuesta: { f: Foto; op: Modo; codigo: string; alfa: Uint8Array; opciones: number; lazo?: boolean; ancla?: { cx: number; cy: number }; img?: HTMLCanvasElement } | null = null;
+  let propuesta: { f: Foto; op: Modo; codigo: string; alfa: Uint8Array; opciones: number; lazo?: boolean; hayMas?: boolean; hayMenos?: boolean; ancla?: { cx: number; cy: number }; img?: HTMLCanvasElement } | null = null;
 
   function recortarAlLimite(f: Foto, alfa: Uint8Array): Uint8Array {
     if (!f.limite) return alfa;
@@ -1132,8 +1134,10 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     const quitar = p.op === "quitar";
     textoPropuesta.textContent = p.lazo ? "¿Pintamos toda el área azul?" : quitar ? "¿Quitamos lo rojo?" : "¿Pintamos lo azul?";
     btnPropSi.textContent = p.lazo ? "Pintar toda" : quitar ? "Quitar" : "Pintar";
-    btnPropOtra.classList.toggle("hidden", !!p.lazo);
-    btnPropOtra.disabled = p.opciones <= 1;
+    btnPropMas.classList.toggle("hidden", !!p.lazo);
+    btnPropMenos.classList.toggle("hidden", !!p.lazo);
+    btnPropMas.disabled = !p.hayMas;
+    btnPropMenos.disabled = !p.hayMenos;
     btnPropMarcar.textContent = p.lazo ? "Con pincel" : "Marcar a mano";
     btnPropSi.disabled = false;
     cajaPropuesta.style.visibility = "hidden";
@@ -1145,7 +1149,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
         ? "Se pinta exactamente lo que rodeaste. Si te quedó chico o grande, tocá “Cancelar” y volvé a rodearlo."
         : quitar
         ? "Revisá lo marcado en rojo antes de quitarlo."
-        : "Revisá lo marcado en azul antes de pintar. Si agarra de más o de menos, probá “Otra forma” o “Marcar a mano”.",
+        : "Revisá lo marcado en azul. Si agarró de más o de menos, tocá “Agarrar más” o “Agarrar menos”.",
     );
     actualizarBotones();
   }
@@ -1189,24 +1193,24 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     avisar(p.op === "pared" ? "Pintado. Tocá otra parte para seguir, o usá el pincel fino para los detalles." : "Listo, se quitó esa zona.");
   });
 
-  btnPropOtra.addEventListener("click", async () => {
+  async function otroTamanoPropuesta(dir: number): Promise<void> {
     const p = propuesta;
     if (!p || ocupado) return;
     ocupado = true;
-    btnPropOtra.disabled = true;
-    btnPropSi.disabled = true;
-    textoPropuesta.textContent = "Buscando otra forma…";
-    const r = await pedir({ tipo: "otra", clave: p.f.clave });
+    btnPropMas.disabled = btnPropMenos.disabled = btnPropSi.disabled = true;
+    textoPropuesta.textContent = dir > 0 ? "Buscando un recorte más grande…" : "Buscando un recorte más chico…";
+    const r = await pedir({ tipo: "otra", clave: p.f.clave, dir });
     ocupado = false;
     if (propuesta !== p) return;
-    if (r.tipo === "zona") proponer({ ...p, alfa: recortarAlLimite(p.f, r.alfa), opciones: r.opciones, img: undefined });
-    else {
-      btnPropOtra.disabled = false;
-      btnPropSi.disabled = false;
-      textoPropuesta.textContent = p.op === "quitar" ? "¿Quitamos lo rojo?" : "¿Pintamos lo azul?";
-      avisar("No hay otra forma para ese toque. Probá “Marcar a mano”.");
+    if (r.tipo === "zona") {
+      proponer({ ...p, alfa: recortarAlLimite(p.f, r.alfa), opciones: r.opciones, hayMas: r.hayMas, hayMenos: r.hayMenos, img: undefined });
+    } else {
+      proponer({ ...p, img: undefined, hayMas: dir > 0 ? false : p.hayMas, hayMenos: dir < 0 ? false : p.hayMenos });
+      avisar(dir > 0 ? "No hay un recorte más grande. Probá “Marcar a mano”." : "No hay un recorte más chico. Probá “Marcar a mano”.");
     }
-  });
+  }
+  btnPropMas.addEventListener("click", () => void otroTamanoPropuesta(1));
+  btnPropMenos.addEventListener("click", () => void otroTamanoPropuesta(-1));
 
   btnPropMarcar.addEventListener("click", () => {
     if (!propuesta) return;
@@ -1216,7 +1220,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       limitarA(p.f, p.alfa);
       modo = "pincel";
       aplicarModo();
-      avisar("Pasá el pincel fino: pinta todo lo que pases, pero solo adentro del área. Para pintar en otro lado, “Quitar área marcada”.");
+      avisar("Pasá el pincel fino: pinta todo lo que pases, pero solo adentro del área. Cuando termines tocá “Listo” arriba en la foto.");
       return;
     }
     const previo = propuesta.op;

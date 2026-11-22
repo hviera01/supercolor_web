@@ -345,6 +345,10 @@ import CTABand from "../components/CTABand.astro";
               <div class="h-1.5 w-full overflow-hidden rounded-full bg-crema-50/25"><div id="probador-estado-barra" class="h-full w-0 rounded-full bg-sol-400 transition-[width]"></div></div>
               <button id="probador-reintentar" type="button" class="pointer-events-auto hidden rounded-lg bg-crema-50 px-4 py-1.5 text-xs font-bold text-tinta-900">Intentar de nuevo</button>
             </div>
+            <div id="probador-limite-chip" class="probador-limite-chip hidden">
+              <span>Pintás solo adentro del área</span>
+              <button id="probador-limite-quitar" type="button">Listo</button>
+            </div>
             <div id="probador-propuesta" class="probador-propuesta hidden" role="group" aria-label="Confirmar la zona">
               <div class="flex items-center gap-2">
                 <p id="probador-propuesta-texto" class="min-w-0 flex-1 text-xs font-bold leading-snug">¿Pintamos lo azul?</p>
@@ -354,7 +358,8 @@ import CTABand from "../components/CTABand.astro";
               </div>
               <div class="mt-2 flex flex-wrap gap-1.5">
                 <button id="probador-prop-si" type="button" class="probador-prop probador-prop-si">Pintar</button>
-                <button id="probador-prop-otra" type="button" class="probador-prop">Otra forma</button>
+                <button id="probador-prop-mas" type="button" class="probador-prop">Agarrar más</button>
+                <button id="probador-prop-menos" type="button" class="probador-prop">Agarrar menos</button>
                 <button id="probador-prop-marcar" type="button" class="probador-prop">Marcar a mano</button>
               </div>
             </div>
@@ -368,7 +373,6 @@ import CTABand from "../components/CTABand.astro";
 
           <div class="mt-2 flex flex-wrap items-center gap-2">
             <button id="probador-otra" type="button" class="probador-herr probador-herr-destacada hidden">Cambiar recorte</button>
-            <button id="probador-limite-quitar" type="button" class="probador-herr probador-herr-destacada hidden">Quitar área marcada</button>
             <button id="probador-deshacer" type="button" class="probador-herr">Deshacer</button>
             <button id="probador-antes" type="button" class="probador-herr" aria-pressed="false" title="Mantené presionado para ver la foto original">Mantené: ver antes</button>
           </div>
@@ -919,6 +923,32 @@ import CTABand from "../components/CTABand.astro";
   }
   .probador-prop:disabled {
     opacity: 0.45;
+  }
+  .probador-limite-chip {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: calc(100% - 1rem);
+    border-radius: 9999px;
+    background: rgb(26 26 26 / 0.88);
+    padding: 0.3rem 0.35rem 0.3rem 0.85rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-crema-50);
+    box-shadow: 0 4px 12px rgb(26 26 26 / 0.3);
+  }
+  .probador-limite-chip.hidden {
+    display: none;
+  }
+  .probador-limite-chip button {
+    border-radius: 9999px;
+    background: var(--color-sol-400);
+    padding: 0.35rem 0.8rem;
+    color: var(--color-tinta-900);
   }
   .probador-prop-cerrar {
     display: grid;

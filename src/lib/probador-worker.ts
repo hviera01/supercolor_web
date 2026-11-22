@@ -26,7 +26,7 @@ env.allowLocalModels = false;
 type Entrada =
   | { tipo: "foto"; id: number; clave: number; rgba: Uint8ClampedArray; ancho: number; alto: number }
   | { tipo: "zona"; id: number; clave: number; x: number; y: number }
-  | { tipo: "otra"; id: number; clave: number }
+  | { tipo: "otra"; id: number; clave: number; dir?: number }
   | { tipo: "olvidar"; id: number; clave: number };
 
 interface EstadoFoto {
@@ -37,7 +37,7 @@ interface EstadoFoto {
   guia: Float32Array;
   canales: CanalesFoto;
   croma: CromaFoto;
-  ultimo: { logits: Float32Array[]; orden: number[]; actual: number; x: number; y: number } | null;
+  ultimo: { logits: Float32Array[]; orden: number[]; areas: number[]; actual: number; x: number; y: number } | null;
 }
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
@@ -149,6 +149,32 @@ function terminarZona(f: EstadoFoto, logits: Float32Array, x: number, y: number)
   return refinarMascara(binaria, f.guia, f.ancho, f.alto, f.canales);
 }
 
+// Los tres recortes del detector suelen ser de distinto tamaño (un recuadro,
+// la pared, toda la fachada): "Agarrar más" o "Agarrar menos" pasa al
+// siguiente más grande o más chico.
+function tamanos(u: NonNullable<EstadoFoto["ultimo"]>): { hayMas: boolean; hayMenos: boolean } {
+  const a = u.areas[u.orden[u.actual]];
+  return {
+    hayMas: u.orden.some((i) => u.areas[i] > a * 1.08),
+    hayMenos: u.orden.some((i) => u.areas[i] < a * 0.92 && u.areas[i] > 0),
+  };
+}
+
+function otroTamano(f: EstadoFoto, dir: number): Uint8Array | null {
+  const u = f.ultimo;
+  if (!u) return null;
+  const a = u.areas[u.orden[u.actual]];
+  let elegido = -1;
+  for (const i of u.orden) {
+    const b = u.areas[i];
+    if (dir > 0 && b > a * 1.08 && (elegido < 0 || b < u.areas[elegido])) elegido = i;
+    if (dir < 0 && b < a * 0.92 && b > 0 && (elegido < 0 || b > u.areas[elegido])) elegido = i;
+  }
+  if (elegido < 0) return null;
+  u.actual = u.orden.indexOf(elegido);
+  return terminarZona(f, u.logits[elegido], u.x, u.y);
+}
+
 async function zona(f: EstadoFoto, x: number, y: number): Promise<{ alfa: Uint8Array; opciones: number }> {
   const [rh, rw] = f.entradas.reshaped_input_sizes[0];
   const puntos = new Tensor("float32", [(x * rw) / f.ancho, (y * rh) / f.alto], [1, 1, 1, 2]);
@@ -162,7 +188,12 @@ async function zona(f: EstadoFoto, x: number, y: number): Promise<{ alfa: Uint8A
   const logits = [0, 1, 2].map((k) => Float32Array.from(datos.subarray(k * n, (k + 1) * n)));
   const puntajes = Array.from(salida.iou_scores.data as Float32Array);
   const orden = ordenarOpciones(logits.map((l) => binarizar(l)), puntajes, f.croma, f.ancho, f.alto, x, y);
-  f.ultimo = { logits, orden, actual: 0, x, y };
+  const areas = logits.map((l) => {
+    let n = 0;
+    for (let k = 0; k < l.length; k++) if (l[k] > 0) n++;
+    return n;
+  });
+  f.ultimo = { logits, orden, areas, actual: 0, x, y };
   return { alfa: terminarZona(f, logits[orden[0]], x, y), opciones: orden.length };
 }
 
@@ -191,10 +222,10 @@ async function atender(m: Entrada): Promise<void> {
     }
     if (m.tipo === "zona") {
       const { alfa, opciones } = await zona(f, Math.round(m.x), Math.round(m.y));
-      ctx.postMessage({ tipo: "zona", id: m.id, alfa, opciones }, [alfa.buffer]);
+      ctx.postMessage({ tipo: "zona", id: m.id, alfa, opciones, ...tamanos(f.ultimo!) }, [alfa.buffer]);
     } else {
-      const alfa = otraForma(f);
-      if (alfa) ctx.postMessage({ tipo: "zona", id: m.id, alfa, opciones: f.ultimo?.orden.length ?? 1 }, [alfa.buffer]);
+      const alfa = m.dir ? otroTamano(f, m.dir) : otraForma(f);
+      if (alfa) ctx.postMessage({ tipo: "zona", id: m.id, alfa, opciones: f.ultimo?.orden.length ?? 1, ...tamanos(f.ultimo!) }, [alfa.buffer]);
       else ctx.postMessage({ tipo: "sin-otra", id: m.id });
     }
   } catch (err) {
