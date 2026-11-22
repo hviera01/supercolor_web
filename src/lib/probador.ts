@@ -70,14 +70,8 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   let mostrandoAntes = false;
   let ultimaFoto: { rgba: Uint8ClampedArray; ancho: number; alto: number } | null = null;
 
-  // Si la tarjeta gráfica del equipo se traba o tarda demasiado, se cambia
-  // solo al procesador y se recuerda para la próxima visita.
-  const CLAVE_CPU = "sc-probador-cpu";
-  let soloCpu = new URLSearchParams(location.search).get("motor") === "cpu";
-  try {
-    if (localStorage.getItem(CLAVE_CPU) === "1") soloCpu = true;
-  } catch {}
   let vigilante: ReturnType<typeof setTimeout> | undefined;
+  const LENTO = "Tu equipo está tardando demasiado en analizar la foto. Probá de nuevo o con otra foto.";
 
   function vigilar(ms: number, alVencer: () => void): void {
     clearTimeout(vigilante);
@@ -89,20 +83,6 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     worker?.terminate();
     worker = null;
     pendientes.clear();
-  }
-
-  function pasarACpu(): void {
-    if (soloCpu) {
-      fallo("Tu equipo está tardando demasiado en analizar la foto. Probá de nuevo o con una foto más sencilla.");
-      return;
-    }
-    soloCpu = true;
-    try {
-      localStorage.setItem(CLAVE_CPU, "1");
-    } catch {}
-    reiniciarWorker();
-    mostrarEstado("Seguimos con otro método, un momento…", -1);
-    void analizar();
   }
 
   function crearWorker(): Worker {
@@ -118,12 +98,10 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
         return;
       }
       if (m.tipo === "analizando") {
-        if (m.motor === "gpu") vigilar(35000, pasarACpu);
-        else
-          vigilar(180000, () => {
-            reiniciarWorker();
-            fallo("Tu equipo está tardando demasiado en analizar la foto. Probá de nuevo o con una foto más sencilla.");
-          });
+        vigilar(120000, () => {
+          reiniciarWorker();
+          fallo(LENTO);
+        });
         mostrarEstado("Analizando tu foto…", -1, "Puede tardar unos segundos.");
         return;
       }
@@ -135,11 +113,8 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     };
     w.onerror = (ev) => {
       ev.preventDefault?.();
-      if (!lista && !soloCpu) pasarACpu();
-      else {
-        reiniciarWorker();
-        fallo("No pudimos iniciar el detector en este navegador.");
-      }
+      reiniciarWorker();
+      fallo("No pudimos iniciar el detector en este navegador.");
     };
     return w;
   }
@@ -529,17 +504,16 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       fallo("No pudimos preparar el detector. Revisá tu conexión e intentá de nuevo.");
     });
     const copia = new Uint8ClampedArray(ultimaFoto.rgba);
-    const r = await pedir({ tipo: "foto", rgba: copia, ancho: ultimaFoto.ancho, alto: ultimaFoto.alto, soloCpu }, [copia.buffer]);
+    const r = await pedir({ tipo: "foto", rgba: copia, ancho: ultimaFoto.ancho, alto: ultimaFoto.alto }, [copia.buffer]);
     if (id !== fotoId) return;
     clearTimeout(vigilante);
     if (r.tipo === "lista") {
-      seccion.dataset.motor = r.motor;
+      seccion.dataset.listo = "1";
       lista = true;
       ocultarEstado();
       avisar(activo ? `Listo: tocá la pared que querés pintar de ${activo.nombre}.` : "Listo: elegí un color y tocá la pared.");
-    } else if (!soloCpu) {
-      pasarACpu();
     } else {
+      console.error("probador:", r.mensaje);
       reiniciarWorker();
       fallo("No pudimos cargar el detector de paredes. Revisá tu conexión a internet e intentá de nuevo.");
     }
