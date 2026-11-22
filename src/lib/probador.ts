@@ -241,7 +241,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     if (modo === "pincel") return activo ? `Pasá el dedo por el detalle que querés pintar de ${activo.nombre}. Acercá la foto para más precisión.` : "Primero elegí un color.";
     if (modo === "borrador") return "Pasá el dedo por donde querés borrar la pintura.";
     if (modo === "quitar") return "Tocá lo que no querés pintar (una puerta, un mueble, un marco…).";
-    if (modo === "marcar") return "Rodeá con el dedo la parte que querés pintar (una columna, un recuadro…). Después no se pinta nada fuera de ahí.";
+    if (modo === "marcar") return "Rodeá con el dedo la parte que querés pintar (una columna, un recuadro…). Después la pintás toda de una vez o con el pincel, sin salirte.";
     if (actual?.limite) return activo ? `Tocá dentro del área marcada para pintarla de ${activo.nombre}; la pintura no sale de ahí.` : "Elegí un color y tocá dentro del área marcada.";
     return activo ? `Tocá la pared que querés pintar de ${activo.nombre}.` : "Elegí un color y tocá la pared.";
   }
@@ -873,19 +873,25 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     c.closePath();
     c.fill();
     const datos = c.getImageData(0, 0, w, h).data;
-    const lim = f.limite ?? new Uint8Array(w * h);
-    for (let k = 0; k < lim.length; k++) if (datos[k * 4 + 3] > lim[k]) lim[k] = datos[k * 4 + 3];
+    const area = new Uint8Array(w * h);
+    for (let k = 0; k < area.length; k++) area[k] = datos[k * 4 + 3];
+    modo = modoPrevio === "marcar" || modoPrevio === "quitar" ? "pared" : modoPrevio;
+    aplicarModo();
+    if (!activo) {
+      limitarA(f, area);
+      avisar("Área marcada. Elegí un color arriba y tocá adentro, o pasá el pincel fino: la pintura no sale de ahí.");
+      return;
+    }
+    proponer({ f, op: "pared", codigo: activo.codigo, alfa: area, opciones: 1, lazo: true });
+  }
+
+  function limitarA(f: Foto, area: Uint8Array): void {
+    const lim = f.limite ?? new Uint8Array(area.length);
+    for (let k = 0; k < lim.length; k++) if (area[k] > lim[k]) lim[k] = area[k];
     f.limite = lim;
     sombraLimite = null;
-    modo = modoPrevio === "marcar" ? "pared" : modoPrevio;
-    aplicarModo();
     dibujarLimite();
     actualizarBotones();
-    avisar(
-      modo === "pincel"
-        ? "Área marcada: el pincel pinta solo adentro, todo lo que pases. Para sumar otra parte tocá “Marcar área” de nuevo."
-        : "Área marcada: tocá adentro y la pintura no sale de ahí. Con el pincel fino pintás todo lo que pases adentro.",
-    );
   }
 
   btnQuitarLimite.addEventListener("click", () => {
@@ -1064,7 +1070,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   }
 
   // ---------- Vista previa de la zona antes de pintar ----------
-  let propuesta: { f: Foto; op: Modo; codigo: string; alfa: Uint8Array; opciones: number; img?: HTMLCanvasElement } | null = null;
+  let propuesta: { f: Foto; op: Modo; codigo: string; alfa: Uint8Array; opciones: number; lazo?: boolean; img?: HTMLCanvasElement } | null = null;
 
   function recortarAlLimite(f: Foto, alfa: Uint8Array): Uint8Array {
     if (!f.limite) return alfa;
@@ -1116,11 +1122,15 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     p.img = imagenPropuesta(p);
     dibujarLimite();
     const quitar = p.op === "quitar";
-    textoPropuesta.textContent = quitar
-      ? "Lo rojo es lo que se va a quitar. ¿Está bien?"
-      : "Lo azul es lo que se va a pintar. ¿Está bien?";
-    btnPropSi.textContent = quitar ? "Quitar esta zona" : "Pintar esta zona";
+    textoPropuesta.textContent = p.lazo
+      ? "Lo azul es el área que marcaste. ¿La pintamos toda, o la terminás vos con el pincel?"
+      : quitar
+        ? "Lo rojo es lo que se va a quitar. ¿Está bien?"
+        : "Lo azul es lo que se va a pintar. ¿Está bien?";
+    btnPropSi.textContent = p.lazo ? "Pintar toda el área" : quitar ? "Quitar esta zona" : "Pintar esta zona";
+    btnPropOtra.classList.toggle("hidden", !!p.lazo);
     btnPropOtra.disabled = p.opciones <= 1;
+    btnPropMarcar.textContent = p.lazo ? "Pintar con pincel adentro" : "Marcar a mano";
     btnPropSi.disabled = false;
     cajaPropuesta.classList.remove("hidden");
     requestAnimationFrame(() => {
@@ -1128,7 +1138,9 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       if (r.bottom > window.innerHeight - 8) cajaPropuesta.scrollIntoView({ block: "end", behavior: "smooth" });
     });
     avisar(
-      quitar
+      p.lazo
+        ? "Se pinta exactamente lo que rodeaste. Si te quedó chico o grande, tocá “Cancelar” y volvé a rodearlo."
+        : quitar
         ? "Revisá lo marcado en rojo antes de quitarlo."
         : "Revisá lo marcado en azul antes de pintar. Si agarra de más o de menos, probá “Otra forma” o “Marcar a mano”.",
     );
@@ -1175,6 +1187,15 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
 
   btnPropMarcar.addEventListener("click", () => {
     if (!propuesta) return;
+    if (propuesta.lazo) {
+      const p = propuesta;
+      cerrarPropuesta();
+      limitarA(p.f, p.alfa);
+      modo = "pincel";
+      aplicarModo();
+      avisar("Pasá el pincel fino: pinta todo lo que pases, pero solo adentro del área. Para pintar en otro lado, “Quitar área marcada”.");
+      return;
+    }
     const previo = propuesta.op;
     cerrarPropuesta();
     modoPrevio = previo;
