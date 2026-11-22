@@ -31,7 +31,7 @@ interface Capa {
   parejaPedida?: number;
 }
 
-type Modo = "pared" | "pincel" | "borrador" | "quitar";
+type Modo = "pared" | "pincel" | "borrador" | "quitar" | "marcar";
 
 interface Paso {
   capas: { codigo: string; alfa: Uint8Array; ref?: number }[];
@@ -46,6 +46,8 @@ interface Foto {
   lista: boolean;
   mini: string;
   croma?: CromaFoto;
+  /** Área marcada a mano: si existe, no se pinta nada fuera de ella. */
+  limite?: Uint8Array;
 }
 
 export interface Probador {
@@ -92,6 +94,9 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   const btnOtra = $<HTMLButtonElement>("probador-otra");
   const btnAntes = $<HTMLButtonElement>("probador-antes");
   const btnDescargar = $<HTMLButtonElement>("probador-descargar");
+  const capaLimite = $<HTMLCanvasElement>("probador-limite");
+  const ctxLimite = capaLimite.getContext("2d")!;
+  const btnQuitarLimite = $<HTMLButtonElement>("probador-limite-quitar");
   const error = $("probador-error");
   const ctx = lienzo.getContext("2d", { willReadFrequently: true })!;
 
@@ -230,6 +235,8 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     if (modo === "pincel") return activo ? `Pasá el dedo por el detalle que querés pintar de ${activo.nombre}. Acercá la foto para más precisión.` : "Primero elegí un color.";
     if (modo === "borrador") return "Pasá el dedo por donde querés borrar la pintura.";
     if (modo === "quitar") return "Tocá lo que no querés pintar (una puerta, un mueble, un marco…).";
+    if (modo === "marcar") return "Rodeá con el dedo la parte que querés pintar (una columna, un recuadro…). Después no se pinta nada fuera de ahí.";
+    if (actual?.limite) return activo ? `Tocá dentro del área marcada para pintarla de ${activo.nombre}; la pintura no sale de ahí.` : "Elegí un color y tocá dentro del área marcada.";
     return activo ? `Tocá la pared que querés pintar de ${activo.nombre}.` : "Elegí un color y tocá la pared.";
   }
 
@@ -332,18 +339,23 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     return modo === "pincel" || modo === "borrador";
   }
 
+  let modoPrevio: Modo = "pared";
+
   function aplicarModo(): void {
     botonesModo.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.probadorModo === modo)));
     cajaTamano.classList.toggle("hidden", !esTrazo());
     cajaTamano.classList.toggle("flex", esTrazo());
     lienzo.style.cursor = esTrazo() ? "none" : modo === "quitar" ? "not-allowed" : "crosshair";
-    lienzo.style.touchAction = esTrazo() || zoom > 1 ? "none" : "pan-y";
+    lienzo.style.touchAction = esTrazo() || modo === "marcar" || zoom > 1 ? "none" : "pan-y";
+    if (modo === "marcar") lienzo.style.cursor = "crosshair";
     if (!esTrazo()) anillo.classList.add("hidden");
   }
 
   botonesModo.forEach((b) =>
     b.addEventListener("click", () => {
-      modo = b.dataset.probadorModo as Modo;
+      const nuevo = b.dataset.probadorModo as Modo;
+      if (nuevo === "marcar" && modo !== "marcar") modoPrevio = modo;
+      modo = nuevo;
       aplicarModo();
       avisar(textoModo());
     }),
@@ -356,6 +368,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     btnOtra.classList.toggle("hidden", !conOtra);
     btnOtra.disabled = ocupado;
     btnDescargar.disabled = capas.length === 0;
+    btnQuitarLimite.classList.toggle("hidden", !actual?.limite);
     btnAntes.disabled = capas.length === 0;
   }
 
@@ -390,6 +403,10 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   }
 
   function aplicarZona(f: Foto, op: Modo, codigo: string, zona: Uint8Array): void {
+    if (f.limite) {
+      const lim = f.limite;
+      zona = zona.map((v, k) => (v * lim[k]) / 255);
+    }
     for (const c of f.capas) {
       if (op === "pared" && c.color.codigo === codigo) continue;
       const a = c.alfa;
@@ -732,8 +749,10 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     for (let i = 1; i <= pasos; i++) {
       const px = t.ux + ((x - t.ux) * i) / pasos;
       const py = t.uy + ((y - t.uy) * i) / pasos;
+      const lim = f.limite;
       const r = pincelar(f.croma, w, h, px, py, radio, t.tono, (k, fuerza) => {
-        const v = Math.round(fuerza * 255);
+        const v = Math.round(fuerza * (lim ? lim[k] : 255));
+        if (!v) return;
         if (capa && v > capa.alfa[k]) capa.alfa[k] = v;
         for (const o of otras) if (o.alfa[k]) o.alfa[k] = Math.min(o.alfa[k], 255 - v);
       });
@@ -755,7 +774,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     ultimaOp = null;
     trazo = {
       id: e.pointerId,
-      tono: modo === "pincel" ? tonoEn(f.croma, f.original.width, f.original.height, p.x, p.y) : null,
+      tono: modo === "pincel" && !f.limite ? tonoEn(f.croma, f.original.width, f.original.height, p.x, p.y) : null,
       borrar: modo === "borrador",
       codigo: activo?.codigo ?? "",
       antes,
@@ -765,6 +784,109 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     pincelada(p.x, p.y);
     actualizarBotones();
   }
+
+  // ---------- Marcar área ----------
+  let lazo: { id: number; pts: { x: number; y: number }[] } | null = null;
+  let sombraLimite: { lim: Uint8Array; img: ImageData } | null = null;
+
+  function dibujarLimite(): void {
+    const f = actual;
+    const W = capaLimite.width;
+    const H = capaLimite.height;
+    ctxLimite.clearRect(0, 0, W, H);
+    if (!f) return;
+    const esc = W / f.original.width;
+    if (f.limite && sombraLimite?.lim === f.limite && sombraLimite.img.width === W) {
+      ctxLimite.putImageData(sombraLimite.img, 0, 0);
+    } else if (f.limite) {
+      const img = ctxLimite.createImageData(W, H);
+      const lim = f.limite;
+      const ow = f.original.width;
+      const oh = f.original.height;
+      for (let y = 0; y < H; y++) {
+        const sy = Math.min(oh - 1, Math.floor(y / esc));
+        for (let x = 0; x < W; x++) {
+          const sx = Math.min(ow - 1, Math.floor(x / esc));
+          const a = 255 - lim[sy * ow + sx];
+          const i = (y * W + x) * 4;
+          img.data[i] = 26;
+          img.data[i + 1] = 26;
+          img.data[i + 2] = 26;
+          img.data[i + 3] = Math.round(a * 0.55);
+        }
+      }
+      ctxLimite.putImageData(img, 0, 0);
+      sombraLimite = { lim: f.limite, img };
+    }
+    if (lazo && lazo.pts.length > 1) {
+      ctxLimite.save();
+      ctxLimite.lineJoin = "round";
+      ctxLimite.lineCap = "round";
+      ctxLimite.beginPath();
+      lazo.pts.forEach((p, i) => (i ? ctxLimite.lineTo(p.x * esc, p.y * esc) : ctxLimite.moveTo(p.x * esc, p.y * esc)));
+      ctxLimite.lineWidth = Math.max(2, W / 260);
+      ctxLimite.strokeStyle = "rgba(26,26,26,.8)";
+      ctxLimite.stroke();
+      ctxLimite.setLineDash([Math.max(4, W / 90), Math.max(4, W / 90)]);
+      ctxLimite.lineWidth = Math.max(1.2, W / 420);
+      ctxLimite.strokeStyle = "#fff";
+      ctxLimite.stroke();
+      ctxLimite.restore();
+    }
+  }
+
+  function prepararCapaLimite(f: Foto): void {
+    capaLimite.width = Math.ceil(f.original.width / 2);
+    capaLimite.height = Math.ceil(f.original.height / 2);
+    dibujarLimite();
+  }
+
+  function cerrarLazo(): void {
+    const f = actual;
+    const l = lazo;
+    lazo = null;
+    if (!f || !l) return;
+    const w = f.original.width;
+    const h = f.original.height;
+    let largo = 0;
+    for (let i = 1; i < l.pts.length; i++) largo += Math.hypot(l.pts[i].x - l.pts[i - 1].x, l.pts[i].y - l.pts[i - 1].y);
+    if (l.pts.length < 3 || largo < Math.min(w, h) / 25) {
+      dibujarLimite();
+      avisar("Rodeá la parte que querés pintar: arrastrá el dedo alrededor, sin levantarlo.");
+      return;
+    }
+    const lienzoLazo = document.createElement("canvas");
+    lienzoLazo.width = w;
+    lienzoLazo.height = h;
+    const c = lienzoLazo.getContext("2d", { willReadFrequently: true })!;
+    c.fillStyle = "#fff";
+    c.beginPath();
+    l.pts.forEach((p, i) => (i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)));
+    c.closePath();
+    c.fill();
+    const datos = c.getImageData(0, 0, w, h).data;
+    const lim = f.limite ?? new Uint8Array(w * h);
+    for (let k = 0; k < lim.length; k++) if (datos[k * 4 + 3] > lim[k]) lim[k] = datos[k * 4 + 3];
+    f.limite = lim;
+    sombraLimite = null;
+    modo = modoPrevio === "marcar" ? "pared" : modoPrevio;
+    aplicarModo();
+    dibujarLimite();
+    actualizarBotones();
+    avisar(
+      modo === "pincel"
+        ? "Área marcada: el pincel pinta solo adentro, todo lo que pases. Para sumar otra parte tocá “Marcar área” de nuevo."
+        : "Área marcada: tocá adentro y la pintura no sale de ahí. Con el pincel fino pintás todo lo que pases adentro.",
+    );
+  }
+
+  btnQuitarLimite.addEventListener("click", () => {
+    if (!actual) return;
+    actual.limite = undefined;
+    dibujarLimite();
+    actualizarBotones();
+    avisar("Listo, ya podés pintar en toda la foto.");
+  });
 
   function terminarTrazo(): void {
     const f = actual;
@@ -783,12 +905,23 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (punteros.size === 2) {
       cancelarTrazo();
+      if (lazo) {
+        lazo = null;
+        dibujarLimite();
+      }
       toque = null;
       const [a, b] = [...punteros.values()];
       gesto = { d0: Math.hypot(a.x - b.x, a.y - b.y), z0: zoom, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
       return;
     }
     if (punteros.size > 2) return;
+    if (modo === "marcar") {
+      e.preventDefault();
+      const p = puntoDe(e.clientX, e.clientY);
+      lazo = { id: e.pointerId, pts: [{ x: p.x, y: p.y }] };
+      dibujarLimite();
+      return;
+    }
     if (esTrazo()) {
       e.preventDefault();
       empezarTrazo(e);
@@ -815,6 +948,15 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       if (gesto.d0 > 20) aplicarZoom(gesto.z0 * (d / gesto.d0), mx, my);
       return;
     }
+    if (lazo && lazo.id === e.pointerId) {
+      const p = puntoDe(e.clientX, e.clientY);
+      const u = lazo.pts[lazo.pts.length - 1];
+      if (Math.hypot(p.x - u.x, p.y - u.y) > 1.5) {
+        lazo.pts.push({ x: p.x, y: p.y });
+        dibujarLimite();
+      }
+      return;
+    }
     if (trazo && trazo.id === e.pointerId) {
       const p = puntoDe(e.clientX, e.clientY);
       pincelada(p.x, p.y);
@@ -838,6 +980,14 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     if (gesto) {
       if (punteros.size < 2) gesto = null;
       toque = null;
+      return;
+    }
+    if (lazo && lazo.id === e.pointerId) {
+      if (e.type === "pointerup") cerrarLazo();
+      else {
+        lazo = null;
+        dibujarLimite();
+      }
       return;
     }
     if (trazo && trazo.id === e.pointerId) {
@@ -892,6 +1042,16 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       actualizarBotones();
       return;
     }
+    if (f.limite) {
+      const lim = f.limite;
+      let adentro = false;
+      for (let k = 0; k < lim.length && !adentro; k += 7) if (lim[k] > 128 && r.alfa[k] > 128) adentro = true;
+      if (!adentro) {
+        avisar("Tocaste fuera del área marcada. Tocá adentro, o “Quitar área marcada” para pintar en otro lado.");
+        actualizarBotones();
+        return;
+      }
+    }
     const antes = guardarPaso(f);
     aplicarZona(f, op, codigo, r.alfa);
     ultimaOp = { modo: op, codigo, antes, opciones: r.opciones, clave: f.clave };
@@ -927,6 +1087,8 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     lienzo.width = f.original.width;
     lienzo.height = f.original.height;
     ctx.putImageData(f.vista, 0, 0);
+    lazo = null;
+    prepararCapaLimite(f);
     zoom = 1;
     caja.style.width = "100%";
     marco.style.height = "";

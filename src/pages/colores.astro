@@ -320,6 +320,10 @@ import CTABand from "../components/CTABand.astro";
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg>
               Quitar zona
             </button>
+            <button type="button" data-probador-modo="marcar" class="probador-modo probador-modo-ancho">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9c0-3 3-5 7-5s7 2 7 5-3 5-7 5c-1.5 0-3-.3-4-.8" stroke-dasharray="2.5 2.5"/><path d="M8 13.2c-1.6.9-2.5 2.1-2.5 3.3 0 1.9 1.8 3.5 4 3.5"/></svg>
+              Marcar área
+            </button>
           </div>
           <label id="probador-tamano-caja" class="mt-3 hidden items-center gap-3 text-xs font-bold text-tinta-700">
             <span class="shrink-0">Grosor del pincel</span>
@@ -330,6 +334,7 @@ import CTABand from "../components/CTABand.astro";
             <div id="probador-marco" class="probador-marco overflow-auto rounded-2xl bg-tinta-900/5">
               <div id="probador-caja" class="relative" style="width: 100%">
                 <canvas id="probador-canvas" class="block w-full select-none" style="touch-action: pan-y" aria-label="Tu foto: tocá la pared que querés pintar"></canvas>
+                <canvas id="probador-limite" class="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true"></canvas>
                 <div id="probador-marca" class="probador-marca hidden" aria-hidden="true"></div>
                 <div id="probador-anillo" class="probador-anillo hidden" aria-hidden="true"></div>
               </div>
@@ -350,6 +355,7 @@ import CTABand from "../components/CTABand.astro";
 
           <div class="mt-2 flex flex-wrap items-center gap-2">
             <button id="probador-otra" type="button" class="probador-herr probador-herr-destacada hidden">Cambiar recorte</button>
+            <button id="probador-limite-quitar" type="button" class="probador-herr probador-herr-destacada hidden">Quitar área marcada</button>
             <button id="probador-deshacer" type="button" class="probador-herr">Deshacer</button>
             <button id="probador-antes" type="button" class="probador-herr" aria-pressed="false" title="Mantené presionado para ver la foto original">Mantené: ver antes</button>
           </div>
@@ -745,10 +751,16 @@ import CTABand from "../components/CTABand.astro";
     background: var(--color-crema-100);
     padding: 0.3rem;
   }
+  .probador-modo-ancho {
+    grid-column: span 2;
+  }
   @media (min-width: 640px) {
     .probador-modos {
       display: inline-grid;
-      grid-template-columns: repeat(4, auto);
+      grid-template-columns: repeat(5, auto);
+    }
+    .probador-modo-ancho {
+      grid-column: auto;
     }
   }
   .probador-modos .probador-modo {
