@@ -262,6 +262,7 @@ function tonoDeReferencia(
 }
 
 const LOG3 = Math.log(3);
+const LUZ_MUY_DISTINTA = Math.log(2.5);
 
 function mediana(v: number[]): number {
   return v.sort((a, b) => a - b)[Math.floor(v.length / 2)];
@@ -287,8 +288,13 @@ export function filtrarPorTono(
   for (let k = 0; k < n; k++) {
     if (mascara[k] < 0.5) continue;
     dentro++;
-    const cambioDeLuz = Math.min(1, Math.abs(Math.log(Math.max(1e-4, croma.luz[k]) / ref.luz)) / LOG3);
-    if (croma.oscuro[k] || Math.hypot(croma.cr[k] - ref.r, croma.cg[k] - ref.g) <= limite * (1 + 0.5 * cambioDeLuz)) {
+    const relLuz = Math.log(Math.max(1e-4, croma.luz[k]) / ref.luz);
+    const cambioDeLuz = Math.min(1, Math.abs(relLuz) / LOG3);
+    const distTono = Math.hypot(croma.cr[k] - ref.r, croma.cg[k] - ref.g);
+    // Mucho más claro y además de otro tono no es la misma pared con más sol:
+    // es un recuadro pintado de otro color (y al revés desde el recuadro).
+    const otraSuperficie = Math.abs(relLuz) > LUZ_MUY_DISTINTA && distTono > 0.045;
+    if (croma.oscuro[k] || (!otraSuperficie && distTono <= limite * (1 + 0.5 * cambioDeLuz))) {
       ok[k] = 1;
       parecidos++;
     }
@@ -325,7 +331,8 @@ export function filtrarPorTono(
   // de cerámica, un marco): la zona no lo cruza. Las sombras suaves sí, porque
   // la luz cambia de a poco. Una línea fina (un cable o su sombra) se puede
   // cruzar en un tramo corto para seguir del otro lado, pero ese tramo no se
-  // pinta salvo que sea muy oscuro.
+  // pinta salvo que sea muy oscuro. Lo que no es casi negro cuenta doble: así
+  // no salta una franja de pared más oscura que separa dos recuadros.
   const maxCruce = Math.max(4, Math.round(Math.min(ancho, alto) / 120));
   const saltoMax = 0.15;
   // Tampoco se mete en algo con mucho más dibujo que donde se tocó (de una
@@ -354,7 +361,7 @@ export function filtrarPorTono(
         nueva = 0;
         nv = croma.logLuz[v];
       } else {
-        nueva = rk + 1;
+        nueva = rk + 2;
         nv = nivel[k];
       }
       if (nueva > maxCruce || nueva >= racha[v]) continue;
@@ -431,6 +438,7 @@ export function refinarMascara(
     const base = Math.max(4, Math.round(Math.min(ancho, alto) / 60));
     p = ajustarPorColor(p, foto, ancho, alto, base);
     p = ajustarPorColor(p, foto, ancho, alto, Math.max(3, Math.round(base / 2)));
+    p = soloUnidoA(p, binaria, ancho, alto);
   }
   const r = Math.max(2, Math.round(Math.min(ancho, alto) / 180));
   const q = filtroGuiado(guia, p, ancho, alto, r, 0.0004);
@@ -449,6 +457,32 @@ export function refinarMascara(
     alfa[k] = t <= 0 ? 0 : t >= 1 ? 255 : Math.round(t * t * (3 - 2 * t) * 255);
   }
   return alfa;
+}
+
+/** Lo que el ajuste por color agregó suelto, lejos de la zona tocada (manchas
+ * en la pared de al lado que tiene un tono parecido), se descarta. */
+function soloUnidoA(p: Float32Array, semilla: Float32Array, ancho: number, alto: number): Float32Array {
+  const n = ancho * alto;
+  const salida = new Float32Array(n);
+  const pila = new Int32Array(n);
+  let tope = 0;
+  for (let k = 0; k < n; k++) {
+    if (semilla[k] >= 0.5 && p[k] >= 0.5) {
+      salida[k] = 1;
+      pila[tope++] = k;
+    }
+  }
+  while (tope) {
+    const k = pila[--tope];
+    const px = k % ancho;
+    const vecinos = [px > 0 ? k - 1 : -1, px < ancho - 1 ? k + 1 : -1, k >= ancho ? k - ancho : -1, k + ancho < n ? k + ancho : -1];
+    for (const v of vecinos) {
+      if (v < 0 || salida[v] || p[v] < 0.5) continue;
+      salida[v] = 1;
+      pila[tope++] = v;
+    }
+  }
+  return salida;
 }
 
 /** Une varias zonas (máximo) y les resta las que se borraron. */
