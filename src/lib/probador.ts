@@ -98,6 +98,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   const ctxLimite = capaLimite.getContext("2d")!;
   const btnQuitarLimite = $<HTMLButtonElement>("probador-limite-quitar");
   const cajaPropuesta = $("probador-propuesta");
+  const zonaFoto = $("probador-zona-foto");
   const textoPropuesta = $("probador-propuesta-texto");
   const btnPropSi = $<HTMLButtonElement>("probador-prop-si");
   const btnPropOtra = $<HTMLButtonElement>("probador-prop-otra");
@@ -882,7 +883,14 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       avisar("Área marcada. Elegí un color arriba y tocá adentro, o pasá el pincel fino: la pintura no sale de ahí.");
       return;
     }
-    proponer({ f, op: "pared", codigo: activo.codigo, alfa: area, opciones: 1, lazo: true });
+    const rl = lienzo.getBoundingClientRect();
+    let sx = 0, sy = 0;
+    for (const q of l.pts) {
+      sx += q.x;
+      sy += q.y;
+    }
+    const ancla = { cx: rl.left + (sx / l.pts.length / w) * rl.width, cy: rl.top + (sy / l.pts.length / h) * rl.height };
+    proponer({ f, op: "pared", codigo: activo.codigo, alfa: area, opciones: 1, lazo: true, ancla });
   }
 
   function limitarA(f: Foto, area: Uint8Array): void {
@@ -1066,11 +1074,11 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
         return;
       }
     }
-    proponer({ f, op, codigo, alfa: recortarAlLimite(f, r.alfa), opciones: r.opciones });
+    proponer({ f, op, codigo, alfa: recortarAlLimite(f, r.alfa), opciones: r.opciones, ancla: { cx, cy } });
   }
 
   // ---------- Vista previa de la zona antes de pintar ----------
-  let propuesta: { f: Foto; op: Modo; codigo: string; alfa: Uint8Array; opciones: number; lazo?: boolean; img?: HTMLCanvasElement } | null = null;
+  let propuesta: { f: Foto; op: Modo; codigo: string; alfa: Uint8Array; opciones: number; lazo?: boolean; ancla?: { cx: number; cy: number }; img?: HTMLCanvasElement } | null = null;
 
   function recortarAlLimite(f: Foto, alfa: Uint8Array): Uint8Array {
     if (!f.limite) return alfa;
@@ -1122,21 +1130,16 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     p.img = imagenPropuesta(p);
     dibujarLimite();
     const quitar = p.op === "quitar";
-    textoPropuesta.textContent = p.lazo
-      ? "Lo azul es el área que marcaste. ¿La pintamos toda, o la terminás vos con el pincel?"
-      : quitar
-        ? "Lo rojo es lo que se va a quitar. ¿Está bien?"
-        : "Lo azul es lo que se va a pintar. ¿Está bien?";
-    btnPropSi.textContent = p.lazo ? "Pintar toda el área" : quitar ? "Quitar esta zona" : "Pintar esta zona";
+    textoPropuesta.textContent = p.lazo ? "¿Pintamos toda el área azul?" : quitar ? "¿Quitamos lo rojo?" : "¿Pintamos lo azul?";
+    btnPropSi.textContent = p.lazo ? "Pintar toda" : quitar ? "Quitar" : "Pintar";
     btnPropOtra.classList.toggle("hidden", !!p.lazo);
     btnPropOtra.disabled = p.opciones <= 1;
-    btnPropMarcar.textContent = p.lazo ? "Pintar con pincel adentro" : "Marcar a mano";
+    btnPropMarcar.textContent = p.lazo ? "Con pincel" : "Marcar a mano";
     btnPropSi.disabled = false;
+    cajaPropuesta.style.visibility = "hidden";
     cajaPropuesta.classList.remove("hidden");
-    requestAnimationFrame(() => {
-      const r = cajaPropuesta.getBoundingClientRect();
-      if (r.bottom > window.innerHeight - 8) cajaPropuesta.scrollIntoView({ block: "end", behavior: "smooth" });
-    });
+    ubicarPropuesta(p);
+    cajaPropuesta.style.visibility = "";
     avisar(
       p.lazo
         ? "Se pinta exactamente lo que rodeaste. Si te quedó chico o grande, tocá “Cancelar” y volvé a rodearlo."
@@ -1145,6 +1148,26 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
         : "Revisá lo marcado en azul antes de pintar. Si agarra de más o de menos, probá “Otra forma” o “Marcar a mano”.",
     );
     actualizarBotones();
+  }
+
+  // La tarjeta sale pegada al toque: debajo del dedo, o arriba si no entra,
+  // siempre dentro de la foto y a la vista.
+  function ubicarPropuesta(p: NonNullable<typeof propuesta>): void {
+    const caja = zonaFoto.getBoundingClientRect();
+    const ancho = cajaPropuesta.offsetWidth;
+    const alto = cajaPropuesta.offsetHeight;
+    const cx = p.ancla?.cx ?? caja.left + caja.width / 2;
+    const cy = p.ancla?.cy ?? caja.top + caja.height / 2;
+    const margen = 8;
+    const separacion = 34;
+    const visibleArriba = Math.max(caja.top, 0);
+    const visibleAbajo = Math.min(caja.bottom, window.innerHeight);
+    let top = cy + separacion;
+    if (top + alto > visibleAbajo - margen) top = cy - separacion - alto;
+    top = Math.max(visibleArriba + margen, Math.min(visibleAbajo - alto - margen, top));
+    const left = Math.max(margen, Math.min(caja.width - ancho - margen, cx - caja.left - ancho / 2));
+    cajaPropuesta.style.left = `${left}px`;
+    cajaPropuesta.style.top = `${top - caja.top}px`;
   }
 
   function cerrarPropuesta(): void {
@@ -1180,7 +1203,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     else {
       btnPropOtra.disabled = false;
       btnPropSi.disabled = false;
-      textoPropuesta.textContent = p.op === "quitar" ? "Lo rojo es lo que se va a quitar. ¿Está bien?" : "Lo azul es lo que se va a pintar. ¿Está bien?";
+      textoPropuesta.textContent = p.op === "quitar" ? "¿Quitamos lo rojo?" : "¿Pintamos lo azul?";
       avisar("No hay otra forma para ese toque. Probá “Marcar a mano”.");
     }
   });

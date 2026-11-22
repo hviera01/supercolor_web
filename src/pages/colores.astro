@@ -330,7 +330,7 @@ import CTABand from "../components/CTABand.astro";
             <input id="probador-tamano" type="range" min="4" max="60" step="1" value="18" class="w-full accent-cielo-500" />
           </label>
 
-          <div class="relative mt-3">
+          <div id="probador-zona-foto" class="relative mt-3">
             <div id="probador-marco" class="probador-marco overflow-auto rounded-2xl bg-tinta-900/5">
               <div id="probador-caja" class="relative" style="width: 100%">
                 <canvas id="probador-canvas" class="block w-full select-none" style="touch-action: pan-y" aria-label="Tu foto: tocá la pared que querés pintar"></canvas>
@@ -345,21 +345,25 @@ import CTABand from "../components/CTABand.astro";
               <div class="h-1.5 w-full overflow-hidden rounded-full bg-crema-50/25"><div id="probador-estado-barra" class="h-full w-0 rounded-full bg-sol-400 transition-[width]"></div></div>
               <button id="probador-reintentar" type="button" class="pointer-events-auto hidden rounded-lg bg-crema-50 px-4 py-1.5 text-xs font-bold text-tinta-900">Intentar de nuevo</button>
             </div>
+            <div id="probador-propuesta" class="probador-propuesta hidden" role="group" aria-label="Confirmar la zona">
+              <div class="flex items-center gap-2">
+                <p id="probador-propuesta-texto" class="min-w-0 flex-1 text-xs font-bold leading-snug">¿Pintamos lo azul?</p>
+                <button id="probador-prop-no" type="button" class="probador-prop-cerrar" aria-label="Cancelar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                </button>
+              </div>
+              <div class="mt-2 flex flex-wrap gap-1.5">
+                <button id="probador-prop-si" type="button" class="probador-prop probador-prop-si">Pintar</button>
+                <button id="probador-prop-otra" type="button" class="probador-prop">Otra forma</button>
+                <button id="probador-prop-marcar" type="button" class="probador-prop">Marcar a mano</button>
+              </div>
+            </div>
             <div class="probador-zoom" role="group" aria-label="Acercar o alejar la foto">
               <button id="probador-alejar" type="button" aria-label="Alejar" disabled>−</button>
               <span id="probador-zoom-nivel">1×</span>
               <button id="probador-acercar" type="button" aria-label="Acercar">+</button>
             </div>
           </div>
-          <div id="probador-propuesta" class="probador-propuesta hidden" role="group" aria-label="Confirmar la zona">
-              <p id="probador-propuesta-texto" class="text-xs font-bold leading-snug">Lo azul es lo que se va a pintar.</p>
-              <div class="mt-2 flex flex-wrap gap-1.5">
-                <button id="probador-prop-si" type="button" class="probador-prop probador-prop-si">Pintar esta zona</button>
-                <button id="probador-prop-otra" type="button" class="probador-prop">Otra forma</button>
-                <button id="probador-prop-marcar" type="button" class="probador-prop">Marcar a mano</button>
-                <button id="probador-prop-no" type="button" class="probador-prop">Cancelar</button>
-              </div>
-            </div>
           <p id="probador-aviso" class="mt-2 min-h-[1.25rem] text-sm font-semibold text-tinta-700" aria-live="polite"></p>
 
           <div class="mt-2 flex flex-wrap items-center gap-2">
@@ -893,19 +897,20 @@ import CTABand from "../components/CTABand.astro";
     color: var(--color-cielo-600);
   }
   .probador-propuesta {
-    margin-top: 0.5rem;
-    scroll-margin-bottom: 1rem;
+    position: absolute;
+    z-index: 6;
+    width: min(18.5rem, calc(100% - 1rem));
     border-radius: 0.9rem;
-    background: rgb(26 26 26 / 0.9);
-    padding: 0.6rem 0.7rem 0.7rem;
+    background: rgb(26 26 26 / 0.92);
+    padding: 0.55rem 0.6rem 0.6rem;
     color: var(--color-crema-50);
     box-shadow: 0 6px 18px rgb(26 26 26 / 0.35);
   }
   .probador-prop {
     border-radius: 0.6rem;
     border: 1px solid rgb(255 255 255 / 0.3);
-    padding: 0.45rem 0.7rem;
-    font-size: 0.78rem;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.76rem;
     font-weight: 700;
     color: var(--color-crema-50);
   }
@@ -914,6 +919,22 @@ import CTABand from "../components/CTABand.astro";
   }
   .probador-prop:disabled {
     opacity: 0.45;
+  }
+  .probador-prop-cerrar {
+    display: grid;
+    width: 1.9rem;
+    height: 1.9rem;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 9999px;
+    color: var(--color-crema-50);
+  }
+  .probador-prop-cerrar:hover {
+    background: rgb(255 255 255 / 0.15);
+  }
+  .probador-prop-cerrar svg {
+    width: 1rem;
+    height: 1rem;
   }
   .probador-prop-si {
     border-color: transparent;
