@@ -187,6 +187,8 @@ export interface CromaFoto {
   cr: Float32Array;
   cg: Float32Array;
   luz: Float32Array;
+  /** Logaritmo de la luz, apenas suavizado: para detectar saltos bruscos (bordes). */
+  logLuz: Float32Array;
   oscuro: Uint8Array;
 }
 
@@ -212,7 +214,10 @@ export function cromaFoto(rgba: Uint8ClampedArray | Uint8Array, ancho: number, a
       cg[k] = g / s;
     }
   }
-  return { cr, cg, luz, oscuro };
+  const log = new Float32Array(n);
+  for (let k = 0; k < n; k++) log[k] = Math.log(Math.max(0.004, luz[k]));
+  const logLuz = cajaPromedio(log, ancho, alto, 1);
+  return { cr, cg, luz, logLuz, oscuro };
 }
 
 function tonoDeReferencia(
@@ -305,6 +310,11 @@ export function filtrarPorTono(
   // se mete por una reja o un vidrio oscuro.
   const maxOscuro = Math.max(4, Math.round(Math.min(ancho, alto) / 120));
   const racha = new Uint8Array(n);
+  // En superficies casi sin color (blancos, grises, beiges) el tono no separa
+  // la pared del marco blanco o del piso: ahí la zona no cruza saltos bruscos
+  // de luz (bordes), aunque sí las sombras suaves.
+  const neutra = Math.hypot(ref.r - 1 / 3, ref.g - 1 / 3) < 0.045;
+  const saltoMax = 0.15;
   pila[tope++] = semilla;
   salida[semilla] = 1;
   while (tope) {
@@ -314,6 +324,7 @@ export function filtrarPorTono(
     const vecinos = [px > 0 ? k - 1 : -1, px < ancho - 1 ? k + 1 : -1, k >= ancho ? k - ancho : -1, k + ancho < n ? k + ancho : -1];
     for (const v of vecinos) {
       if (v < 0 || !ok[v] || salida[v]) continue;
+      if (neutra && !croma.oscuro[v] && !croma.oscuro[k] && Math.abs(croma.logLuz[v] - croma.logLuz[k]) > saltoMax) continue;
       const nueva = croma.oscuro[v] ? base + 1 : 0;
       if (nueva > maxOscuro) continue;
       racha[v] = nueva;
@@ -388,9 +399,18 @@ export function refinarMascara(
   }
   const r = Math.max(2, Math.round(Math.min(ancho, alto) / 180));
   const q = filtroGuiado(guia, p, ancho, alto, r, 0.0004);
+  // El suavizado solo actúa en una franja angosta pegada al borde: afuera no
+  // queda pintura a medias (manchas) y adentro la pared queda pareja.
+  const banda = Math.max(2, Math.round(Math.min(ancho, alto) / 320));
+  const cerca = cajaPromedio(p, ancho, alto, banda);
   const alfa = new Uint8Array(n);
   for (let k = 0; k < n; k++) {
-    const t = (q[k] - 0.35) / 0.3;
+    if (cerca[k] <= 0.001) continue;
+    if (cerca[k] >= 0.999) {
+      alfa[k] = 255;
+      continue;
+    }
+    const t = (q[k] - 0.4) / 0.2;
     alfa[k] = t <= 0 ? 0 : t >= 1 ? 255 : Math.round(t * t * (3 - 2 * t) * 255);
   }
   return alfa;

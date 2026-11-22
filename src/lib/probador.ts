@@ -66,6 +66,8 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   const caja = $("probador-caja");
   const lienzo = $<HTMLCanvasElement>("probador-canvas");
   const anillo = $("probador-anillo");
+  const lupa = $<HTMLCanvasElement>("probador-lupa");
+  const ctxLupa = lupa.getContext("2d")!;
   const estado = $("probador-estado");
   const estadoTexto = $("probador-estado-texto");
   const estadoBarra = $("probador-estado-barra");
@@ -433,6 +435,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       if (!f || !reg) return;
       pintarCapas(f.original.data, capasParaPintar(f), f.vista.data, f.original.width, reg);
       if (!mostrandoAntes) ctx.putImageData(f.vista, 0, 0, reg.x0, reg.y0, reg.x1 - reg.x0 + 1, reg.y1 - reg.y0 + 1);
+      dibujarLupa();
     });
   }
 
@@ -569,12 +572,68 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     anillo.classList.remove("hidden");
   }
 
+  // Lupa: el dedo tapa lo que se está pintando, así que encima se ve esa zona
+  // aumentada, con el círculo del pincel.
+  const AUMENTO = 3;
+  let lupaEn: { cx: number; cy: number } | null = null;
+
+  function dibujarLupa(): void {
+    if (!lupaEn) return;
+    const { cx, cy } = lupaEn;
+    const lado = 132;
+    const r = lienzo.getBoundingClientRect();
+    const escala = lienzo.width / r.width;
+    const p = puntoDe(cx, cy);
+    const fuente = (lado / AUMENTO) * escala;
+    const W = lupa.width;
+    ctxLupa.save();
+    ctxLupa.fillStyle = "#e8e2d8";
+    ctxLupa.fillRect(0, 0, W, W);
+    ctxLupa.beginPath();
+    ctxLupa.arc(W / 2, W / 2, W / 2, 0, Math.PI * 2);
+    ctxLupa.clip();
+    ctxLupa.imageSmoothingEnabled = true;
+    ctxLupa.drawImage(lienzo, p.x - fuente / 2, p.y - fuente / 2, fuente, fuente, 0, 0, W, W);
+    const radio = (Number(tamano.value) / 2) * AUMENTO * (W / lado);
+    ctxLupa.lineWidth = 3;
+    ctxLupa.strokeStyle = "rgba(26,26,26,.75)";
+    ctxLupa.beginPath();
+    ctxLupa.arc(W / 2, W / 2, radio, 0, Math.PI * 2);
+    ctxLupa.stroke();
+    ctxLupa.lineWidth = 1.5;
+    ctxLupa.strokeStyle = "#fff";
+    ctxLupa.beginPath();
+    ctxLupa.arc(W / 2, W / 2, radio, 0, Math.PI * 2);
+    ctxLupa.stroke();
+    ctxLupa.restore();
+    lupa.style.borderColor = modo === "borrador" ? "#fff" : activo?.hex ?? "#fff";
+  }
+
+  function moverLupa(cx: number, cy: number): void {
+    lupaEn = { cx, cy };
+    const lado = 132;
+    let x = cx - lado / 2;
+    let y = cy - lado - 56;
+    if (y < 8) y = cy + 56;
+    x = Math.max(8, Math.min(window.innerWidth - lado - 8, x));
+    lupa.style.left = `${x}px`;
+    lupa.style.top = `${y}px`;
+    lupa.classList.remove("hidden");
+    dibujarLupa();
+  }
+
+  function ocultarLupa(): void {
+    lupaEn = null;
+    lupa.classList.add("hidden");
+  }
+
   const punteros = new Map<number, { x: number; y: number }>();
   let gesto: { d0: number; z0: number; mx: number; my: number } | null = null;
   let toque: { id: number; x: number; y: number; ux: number; uy: number; movio: boolean } | null = null;
   let trazo: { id: number; tono: Tono | null; borrar: boolean; codigo: string; antes: Paso; ux: number; uy: number } | null = null;
 
   function cancelarTrazo(): void {
+    ocultarLupa();
     if (!trazo || !actual) return;
     restaurar(actual, trazo.antes);
     actual.historial.pop();
@@ -659,6 +718,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       e.preventDefault();
       empezarTrazo(e);
       moverAnillo(e.clientX, e.clientY);
+      if (trazo) moverLupa(e.clientX, e.clientY);
     } else {
       toque = { id: e.pointerId, x: e.clientX, y: e.clientY, ux: e.clientX, uy: e.clientY, movio: false };
     }
@@ -684,6 +744,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       const p = puntoDe(e.clientX, e.clientY);
       pincelada(p.x, p.y);
       moverAnillo(e.clientX, e.clientY);
+      moverLupa(e.clientX, e.clientY);
       return;
     }
     if (toque && toque.id === e.pointerId) {
@@ -705,6 +766,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       return;
     }
     if (trazo && trazo.id === e.pointerId) {
+      ocultarLupa();
       terminarTrazo();
       if (e.pointerType !== "mouse") anillo.classList.add("hidden");
       return;
