@@ -221,13 +221,14 @@ export function cromaFoto(rgba: Uint8ClampedArray | Uint8Array, ancho: number, a
   const logLuz = cajaPromedio(log, ancho, alto, 1);
   // Cuánto dibujo fino tiene cada parte: una cerámica con diseño, ladrillo o
   // piedra tiene muchos cambios suaves de luz juntos; una pared lisa casi
-  // ninguno. Los saltos fuertes (un cable, un borde) no cuentan.
+  // ninguno. Lo que toca algo casi negro (un cable) no cuenta.
   const marcas = new Float32Array(n);
   for (let yy = 0; yy < alto - 1; yy++) {
     for (let xx = 0; xx < ancho - 1; xx++) {
       const k = yy * ancho + xx;
+      if (oscuro[k] || oscuro[k + 1] || oscuro[k + ancho]) continue;
       const s = Math.max(Math.abs(logLuz[k + 1] - logLuz[k]), Math.abs(logLuz[k + ancho] - logLuz[k]));
-      if (s > 0.06 && s < 0.2) marcas[k] = 1;
+      if (s > 0.06 && s < 0.8) marcas[k] = 1;
     }
   }
   const textura = cajaPromedio(marcas, ancho, alto, Math.max(4, Math.round(Math.min(ancho, alto) / 40)));
@@ -648,22 +649,33 @@ export function luzPareja(
   ls.sort((a, b) => a - b);
   const luzAlta = ls[Math.floor(ls.length * 0.8)];
 
+  // Lo muy oscuro (una reja, el hueco de una ventana, la sombra bajo el
+  // techo) no es un desperfecto ni sirve de muestra: queda como está.
+  const fijo = new Uint8Array(m);
+  for (let i = 0; i < m; i++) {
+    if (!S[i]) continue;
+    const j = global(i) * 4;
+    if (L[i] < luzAlta - 1.4 || LINEAL[rgba[j]] + LINEAL[rgba[j + 1]] + LINEAL[rgba[j + 2]] <= 0.05) fijo[i] = 1;
+  }
+
   const malo = new Uint8Array(m);
   const amp = 0.08;
   const pico = (a: number, b: number, c: number) =>
     a > luzAlta - 1.4 && c > luzAlta - 1.4 && ((b - a > amp && b - c > amp) || (a - b > amp && c - b > amp));
+  let cuantosMalos = 0;
+  let cuantosS = 0;
   for (let i = 0; i < m; i++) {
-    if (!S[i]) continue;
+    if (!S[i] || fijo[i]) continue;
+    cuantosS++;
     if (S[i] === 2) {
       malo[i] = 1;
+      cuantosMalos++;
       continue;
     }
-    // Lo muy oscuro (una reja, el hueco de una ventana, la sombra bajo el
-    // techo) no es un desperfecto: se deja como está.
-    if (L[i] < luzAlta - 1.4 || LINEAL[rgba[global(i) * 4]] + LINEAL[rgba[global(i) * 4 + 1]] + LINEAL[rgba[global(i) * 4 + 2]] <= 0.05) continue;
     const distTono = Math.hypot(cr[i] - tr, cg[i] - tg);
     if ((L[i] > luzAlta - 0.7 && distTono > 0.04) || distTono > 0.08) {
       malo[i] = 1;
+      cuantosMalos++;
       continue;
     }
     const x = i % w;
@@ -671,69 +683,72 @@ export function luzPareja(
     for (const d of [2, 5, 10]) {
       if (x >= d && x < w - d && pico(L[i - d], L[i], L[i + d])) malo[i] = 1;
       else if (y >= d && y < h - d && pico(L[i - d * w], L[i], L[i + d * w])) malo[i] = 1;
-      if (malo[i]) break;
+      if (malo[i]) {
+        cuantosMalos++;
+        break;
+      }
     }
   }
+  // Si casi todo "parece desperfecto" no es una pared con daños sino una
+  // superficie con dibujo (cerámica, piedra): no se toca.
+  if (!cuantosS || cuantosMalos > cuantosS * 0.45) return { luz, relleno };
+
   const malo2 = cajaPromedio(Float32Array.from(malo), w, h, 1);
   const sano = new Float32Array(m);
   const Ls = new Float32Array(m);
-  for (let i = 0; i < m; i++) {
-    sano[i] = S[i] && malo2[i] === 0 ? 1 : 0;
-    Ls[i] = L[i] * sano[i];
-  }
-
-  const salida = Float32Array.from(L);
   const pendiente = new Uint8Array(m);
   let quedan = 0;
   for (let i = 0; i < m; i++) {
-    if (S[i] && malo2[i] > 0) {
+    if (!S[i] || fijo[i]) continue;
+    if (malo2[i] > 0) {
       pendiente[i] = 1;
       quedan++;
+    } else {
+      sano[i] = 1;
+      Ls[i] = L[i];
     }
   }
-  for (let r = Math.max(2, Math.round(lado / 200)); quedan && r <= lado / 5; r *= 2) {
+
+  // Cada desperfecto toma la luz de la pared sana más cercana. Lo que queda
+  // lejos de pared sana (un pedazo grande que falta) se deja como está: ahí
+  // no hay de dónde sacar cómo sería la pared.
+  const salida = Float32Array.from(L);
+  const llenado = new Uint8Array(m);
+  for (let r = Math.max(2, Math.round(lado / 200)); quedan && r <= lado / 12; r *= 2) {
     const num = cajaPromedio(Ls, w, h, r);
     const den = cajaPromedio(sano, w, h, r);
     for (let i = 0; i < m; i++) {
-      if (!pendiente[i] || den[i] < 0.03) continue;
+      if (!pendiente[i] || den[i] < 0.2) continue;
       salida[i] = num[i] / den[i];
       pendiente[i] = 0;
+      llenado[i] = 1;
       quedan--;
     }
   }
 
+  const util = new Float32Array(m);
+  for (let i = 0; i < m; i++) util[i] = sano[i] || llenado[i] ? 1 : 0;
+
   // Lo rellenado se suaviza con lo de alrededor para que no queden escalones
   // entre partes que se llenaron desde más cerca o más lejos.
-  const relleno0 = new Float32Array(m);
-  for (let i = 0; i < m; i++) if (S[i] && malo2[i] > 0) relleno0[i] = 1;
   const rs2 = Math.max(2, Math.round(lado / 120));
   for (let vuelta = 0; vuelta < 3; vuelta++) {
-    const peso = new Float32Array(m);
     const val = new Float32Array(m);
-    for (let i = 0; i < m; i++) {
-      if (!S[i]) continue;
-      peso[i] = 1;
-      val[i] = salida[i];
-    }
+    for (let i = 0; i < m; i++) if (util[i]) val[i] = salida[i];
     const nv = cajaPromedio(val, w, h, rs2);
-    const dv = cajaPromedio(peso, w, h, rs2);
-    for (let i = 0; i < m; i++) if (relleno0[i] && dv[i] > 0.05) salida[i] = nv[i] / dv[i];
+    const dv = cajaPromedio(util, w, h, rs2);
+    for (let i = 0; i < m; i++) if (llenado[i] && dv[i] > 0.05) salida[i] = nv[i] / dv[i];
   }
 
   // Repello disparejo: las variaciones chicas de luz se achican; las grandes
   // (bordes de sombra) quedan como están.
-  const pesoS = new Float32Array(m);
   const valS = new Float32Array(m);
-  for (let i = 0; i < m; i++) {
-    if (!S[i]) continue;
-    pesoS[i] = 1;
-    valS[i] = salida[i];
-  }
+  for (let i = 0; i < m; i++) if (util[i]) valS[i] = salida[i];
   const rb = Math.max(3, Math.round(lado / 80));
   const num = cajaPromedio(valS, w, h, rb);
-  const den = cajaPromedio(pesoS, w, h, rb);
+  const den = cajaPromedio(util, w, h, rb);
   for (let i = 0; i < m; i++) {
-    if (!S[i] || den[i] < 0.05) continue;
+    if (!util[i] || den[i] < 0.3) continue;
     const base = num[i] / den[i];
     const dev = salida[i] - base;
     const t = Math.min(1, Math.max(0, (Math.abs(dev) - 0.08) / 0.14));

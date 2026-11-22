@@ -163,17 +163,17 @@ test("repintar una región da lo mismo que repintar todo", () => {
 });
 
 test("disimular desperfectos empareja lo pelado y conserva la sombra", () => {
-  const w = 300, h = 300;
+  const w = 600, h = 600;
   const foto = imagen(w, h, (x, y) => {
     if (x >= 100 && x < 140 && y >= 60 && y < 100) return [235, 228, 215];
-    if (y >= 200) return [120, 70, 50];
+    if (y >= 420) return [120, 70, 50];
     return [200, 120, 90];
   });
   const alfa = new Uint8Array(w * h).fill(255);
   const { luz } = luzPareja(foto, alfa, w, h);
   const pared = luz[30 * w + 30];
   const pelado = luz[80 * w + 120];
-  const sombra = luz[260 * w + 150];
+  const sombra = luz[520 * w + 300];
   assert.ok(Math.abs(Math.log(pelado / pared)) < 0.1, `lo pelado queda como la pared (${pelado} vs ${pared})`);
   assert.ok(sombra < pared * 0.5, "la sombra se mantiene");
 });
