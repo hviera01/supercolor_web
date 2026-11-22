@@ -16,6 +16,7 @@ import {
   tonoEn,
   type ColorCapa,
   type CromaFoto,
+  type Pareja,
   type Region,
   type Tono,
 } from "./pintar-foto";
@@ -25,6 +26,9 @@ interface Capa {
   rgb: ColorCapa;
   alfa: Uint8Array;
   ref?: number;
+  pareja?: Pareja;
+  /** Pedido de "disimular" en curso para esta capa (para descartar los viejos). */
+  parejaPedida?: number;
 }
 
 type Modo = "pared" | "pincel" | "borrador" | "quitar";
@@ -399,12 +403,13 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       capa.ref = undefined;
     }
     f.capas = f.capas.filter((c) => c.alfa.some((v) => v > 8));
+    olvidarParejas(f);
   }
 
   function capasParaPintar(f: Foto) {
     return f.capas.map((c) => {
       if (c.ref === undefined) c.ref = luzDeReferencia(f.original.data, c.alfa);
-      return { color: c.rgb, alfa: c.alfa, ref: c.ref };
+      return { color: c.rgb, alfa: c.alfa, ref: c.ref, pareja: disimular ? c.pareja : undefined };
     });
   }
 
@@ -416,7 +421,75 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     pintarUsados();
     pintarTira();
     actualizarBotones();
+    pedirParejas(f);
   }
+
+  // ---------- Disimular desperfectos ----------
+  let disimular = false;
+  let workerPareja: Worker | null = null;
+  let siguientePareja = 1;
+  const esperandoPareja = new Map<number, { f: Foto; capa: Capa }>();
+  const btnDisimular = $<HTMLInputElement>("probador-disimular");
+
+  function olvidarParejas(f: Foto): void {
+    for (const c of f.capas) {
+      c.pareja = undefined;
+      c.parejaPedida = undefined;
+    }
+  }
+
+  function trabajadorPareja(): Worker {
+    if (workerPareja) return workerPareja;
+    const w = new Worker(new URL("./pareja-worker.ts", import.meta.url), { type: "module" });
+    w.onmessage = (e) => {
+      const { id, luz, relleno } = e.data;
+      const pedido = esperandoPareja.get(id);
+      esperandoPareja.delete(id);
+      if (!pedido || pedido.capa.parejaPedida !== id || !pedido.f.capas.includes(pedido.capa)) return;
+      pedido.capa.pareja = { luz, relleno };
+      if (esperandoPareja.size === 0 && actual === pedido.f && disimular) {
+        avisar("Listo: pared emparejada, como si estuviera resanada.");
+      }
+      if (actual === pedido.f && disimular) redibujar();
+    };
+    w.onerror = () => {
+      workerPareja?.terminate();
+      workerPareja = null;
+      esperandoPareja.clear();
+    };
+    workerPareja = w;
+    return w;
+  }
+
+  function pedirParejas(f: Foto): void {
+    if (!disimular || trazo) return;
+    const w = f.original.width;
+    const h = f.original.height;
+    let pidio = false;
+    for (const capa of f.capas) {
+      if (capa.pareja || capa.parejaPedida) continue;
+      const otras = new Uint8Array(w * h);
+      for (const o of f.capas) {
+        if (o === capa) continue;
+        for (let k = 0; k < otras.length; k++) if (o.alfa[k] > otras[k]) otras[k] = o.alfa[k];
+      }
+      const id = siguientePareja++;
+      capa.parejaPedida = id;
+      esperandoPareja.set(id, { f, capa });
+      trabajadorPareja().postMessage(
+        { id, rgba: f.original.data.slice(), alfa: capa.alfa.slice(), otras, ancho: w, alto: h },
+      );
+      pidio = true;
+    }
+    if (pidio && actual === f) avisar("Emparejando la pared…");
+  }
+
+  btnDisimular.addEventListener("change", () => {
+    disimular = btnDisimular.checked;
+    if (!actual) return;
+    redibujar();
+    if (!disimular) avisar("Se ve la pared tal como está en la foto.");
+  });
 
   let regionPendiente: Region | null = null;
   let cuadroPendiente = false;
@@ -463,6 +536,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     guardarPaso(actual);
     ultimaOp = null;
     actual.capas = actual.capas.filter((c) => c.color.codigo !== b.dataset.quitarColor);
+    olvidarParejas(actual);
     redibujar();
   });
 
@@ -697,6 +771,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     trazo = null;
     if (!f) return;
     f.capas = f.capas.filter((c) => c.alfa.some((v) => v > 8));
+    olvidarParejas(f);
     redibujar();
   }
 

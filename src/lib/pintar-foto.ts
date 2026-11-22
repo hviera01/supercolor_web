@@ -12,6 +12,7 @@ export interface CapaPintura {
   color: ColorCapa;
   alfa: Uint8Array;
   ref?: number;
+  pareja?: Pareja;
 }
 
 const LINEAL = new Float32Array(256);
@@ -514,6 +515,234 @@ export function luzDeReferencia(rgba: Uint8ClampedArray | Uint8Array, alfa: Uint
   return 0.5;
 }
 
+export interface Pareja {
+  /** Luminancia lineal de toda la foto, emparejada dentro de la capa. */
+  luz: Float32Array;
+  /** Huequitos sin pintar dentro de la capa que también se cubren. */
+  relleno: Uint8Array;
+}
+
+/** "Disimular desperfectos": dentro de una capa, lo pelado, las manchas, las
+ * grietas y el repello disparejo toman la luz de la pared sana de alrededor,
+ * como si se hubiera resanado antes de pintar. Las sombras grandes (de un
+ * alero, de una esquina) se mantienen porque conservan el tono de la pared;
+ * lo pelado deja ver otro material, de otro tono. */
+export function luzPareja(
+  rgba: Uint8ClampedArray | Uint8Array,
+  alfa: Uint8Array,
+  ancho: number,
+  alto: number,
+  otras?: Uint8Array,
+): Pareja {
+  const n = ancho * alto;
+  const luz = new Float32Array(n);
+  for (let k = 0; k < n; k++) luz[k] = luminanciaLineal(rgba, k * 4);
+  const relleno = new Uint8Array(n);
+
+  let x0 = ancho, y0 = alto, x1 = -1, y1 = -1;
+  for (let y = 0; y < alto; y++) {
+    for (let x = 0; x < ancho; x++) {
+      if (alfa[y * ancho + x] < 128) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  if (x1 < 0) return { luz, relleno };
+  const lado = Math.min(ancho, alto);
+  const margen = Math.round(lado / 40);
+  x0 = Math.max(0, x0 - margen);
+  y0 = Math.max(0, y0 - margen);
+  x1 = Math.min(ancho - 1, x1 + margen);
+  y1 = Math.min(alto - 1, y1 + margen);
+  const w = x1 - x0 + 1;
+  const h = y1 - y0 + 1;
+  const m = w * h;
+  const global = (i: number) => (y0 + Math.floor(i / w)) * ancho + x0 + (i % w);
+
+  const L = new Float32Array(m);
+  const cr = new Float32Array(m);
+  const cg = new Float32Array(m);
+  const S = new Uint8Array(m);
+  for (let i = 0; i < m; i++) {
+    const k = global(i);
+    const j = k * 4;
+    const r = LINEAL[rgba[j]];
+    const g = LINEAL[rgba[j + 1]];
+    const b = LINEAL[rgba[j + 2]];
+    const s = r + g + b;
+    L[i] = Math.log(Math.max(1e-4, luz[k]));
+    cr[i] = s > 0.05 ? r / s : 1 / 3;
+    cg[i] = s > 0.05 ? g / s : 1 / 3;
+    S[i] = alfa[k] >= 128 ? 1 : 0;
+  }
+
+  // Huequitos encerrados por la capa (descascarados chicos, clavos, manchas)
+  // también se cubren; los grandes (un recuadro), los muy oscuros (una
+  // ventana) y los que ya tienen otro color no.
+  const afuera = new Uint8Array(m);
+  const pila = new Int32Array(m);
+  let tope = 0;
+  for (let i = 0; i < m; i++) {
+    const x = i % w;
+    const y = Math.floor(i / w);
+    if (!S[i] && (x === 0 || y === 0 || x === w - 1 || y === h - 1)) {
+      afuera[i] = 1;
+      pila[tope++] = i;
+    }
+  }
+  while (tope) {
+    const i = pila[--tope];
+    const x = i % w;
+    for (const v of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i >= w ? i - w : -1, i + w < m ? i + w : -1]) {
+      if (v < 0 || S[v] || afuera[v]) continue;
+      afuera[v] = 1;
+      pila[tope++] = v;
+    }
+  }
+  const maxHueco = Math.round((lado / 40) ** 2);
+  const visto = new Uint8Array(m);
+  const comp: number[] = [];
+  for (let i = 0; i < m; i++) {
+    if (S[i] || afuera[i] || visto[i]) continue;
+    comp.length = 0;
+    visto[i] = 1;
+    pila[0] = i;
+    tope = 1;
+    let oscuros = 0;
+    let conOtroColor = false;
+    while (tope) {
+      const p = pila[--tope];
+      comp.push(p);
+      if (luz[global(p)] < 0.03) oscuros++;
+      if (otras && otras[global(p)] >= 64) conOtroColor = true;
+      const x = p % w;
+      for (const v of [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1, p >= w ? p - w : -1, p + w < m ? p + w : -1]) {
+        if (v < 0 || S[v] || afuera[v] || visto[v]) continue;
+        visto[v] = 1;
+        pila[tope++] = v;
+      }
+    }
+    if (!conOtroColor && comp.length <= maxHueco && oscuros < comp.length * 0.1) {
+      for (const p of comp) {
+        S[p] = 2;
+        relleno[global(p)] = 255;
+      }
+    }
+  }
+
+  // Tono y luz de la pared sana.
+  const rs: number[] = [];
+  const gs: number[] = [];
+  const ls: number[] = [];
+  for (let i = 0; i < m; i += 3) {
+    if (S[i] !== 1) continue;
+    rs.push(cr[i]);
+    gs.push(cg[i]);
+    ls.push(L[i]);
+  }
+  if (!rs.length) return { luz, relleno };
+  const tr = mediana(rs);
+  const tg = mediana(gs);
+  ls.sort((a, b) => a - b);
+  const luzAlta = ls[Math.floor(ls.length * 0.8)];
+
+  const malo = new Uint8Array(m);
+  const amp = 0.08;
+  const pico = (a: number, b: number, c: number) =>
+    a > luzAlta - 1.4 && c > luzAlta - 1.4 && ((b - a > amp && b - c > amp) || (a - b > amp && c - b > amp));
+  for (let i = 0; i < m; i++) {
+    if (!S[i]) continue;
+    if (S[i] === 2) {
+      malo[i] = 1;
+      continue;
+    }
+    // Lo muy oscuro (una reja, el hueco de una ventana, la sombra bajo el
+    // techo) no es un desperfecto: se deja como está.
+    if (L[i] < luzAlta - 1.4 || LINEAL[rgba[global(i) * 4]] + LINEAL[rgba[global(i) * 4 + 1]] + LINEAL[rgba[global(i) * 4 + 2]] <= 0.05) continue;
+    const distTono = Math.hypot(cr[i] - tr, cg[i] - tg);
+    if ((L[i] > luzAlta - 0.7 && distTono > 0.04) || distTono > 0.08) {
+      malo[i] = 1;
+      continue;
+    }
+    const x = i % w;
+    const y = Math.floor(i / w);
+    for (const d of [2, 5, 10]) {
+      if (x >= d && x < w - d && pico(L[i - d], L[i], L[i + d])) malo[i] = 1;
+      else if (y >= d && y < h - d && pico(L[i - d * w], L[i], L[i + d * w])) malo[i] = 1;
+      if (malo[i]) break;
+    }
+  }
+  const malo2 = cajaPromedio(Float32Array.from(malo), w, h, 1);
+  const sano = new Float32Array(m);
+  const Ls = new Float32Array(m);
+  for (let i = 0; i < m; i++) {
+    sano[i] = S[i] && malo2[i] === 0 ? 1 : 0;
+    Ls[i] = L[i] * sano[i];
+  }
+
+  const salida = Float32Array.from(L);
+  const pendiente = new Uint8Array(m);
+  let quedan = 0;
+  for (let i = 0; i < m; i++) {
+    if (S[i] && malo2[i] > 0) {
+      pendiente[i] = 1;
+      quedan++;
+    }
+  }
+  for (let r = Math.max(2, Math.round(lado / 200)); quedan && r <= lado / 5; r *= 2) {
+    const num = cajaPromedio(Ls, w, h, r);
+    const den = cajaPromedio(sano, w, h, r);
+    for (let i = 0; i < m; i++) {
+      if (!pendiente[i] || den[i] < 0.03) continue;
+      salida[i] = num[i] / den[i];
+      pendiente[i] = 0;
+      quedan--;
+    }
+  }
+
+  // Lo rellenado se suaviza con lo de alrededor para que no queden escalones
+  // entre partes que se llenaron desde más cerca o más lejos.
+  const relleno0 = new Float32Array(m);
+  for (let i = 0; i < m; i++) if (S[i] && malo2[i] > 0) relleno0[i] = 1;
+  const rs2 = Math.max(2, Math.round(lado / 120));
+  for (let vuelta = 0; vuelta < 3; vuelta++) {
+    const peso = new Float32Array(m);
+    const val = new Float32Array(m);
+    for (let i = 0; i < m; i++) {
+      if (!S[i]) continue;
+      peso[i] = 1;
+      val[i] = salida[i];
+    }
+    const nv = cajaPromedio(val, w, h, rs2);
+    const dv = cajaPromedio(peso, w, h, rs2);
+    for (let i = 0; i < m; i++) if (relleno0[i] && dv[i] > 0.05) salida[i] = nv[i] / dv[i];
+  }
+
+  // Repello disparejo: las variaciones chicas de luz se achican; las grandes
+  // (bordes de sombra) quedan como están.
+  const pesoS = new Float32Array(m);
+  const valS = new Float32Array(m);
+  for (let i = 0; i < m; i++) {
+    if (!S[i]) continue;
+    pesoS[i] = 1;
+    valS[i] = salida[i];
+  }
+  const rb = Math.max(3, Math.round(lado / 80));
+  const num = cajaPromedio(valS, w, h, rb);
+  const den = cajaPromedio(pesoS, w, h, rb);
+  for (let i = 0; i < m; i++) {
+    if (!S[i] || den[i] < 0.05) continue;
+    const base = num[i] / den[i];
+    const dev = salida[i] - base;
+    const t = Math.min(1, Math.max(0, (Math.abs(dev) - 0.08) / 0.14));
+    const v = base + dev * (0.3 + 0.7 * t * t * (3 - 2 * t));
+    luz[global(i)] = Math.exp(v);
+  }
+  return { luz, relleno };
+}
+
 export interface Region {
   x0: number;
   y0: number;
@@ -533,14 +762,14 @@ export function pintarCapas(
 ): void {
   const prep = capas.map((capa) => {
     const ref = capa.ref ?? luzDeReferencia(original, capa.alfa);
-    return { a: capa.alfa, ref, tr: aLineal(capa.color.r), tg: aLineal(capa.color.g), tb: aLineal(capa.color.b) };
+    return { a: capa.alfa, ref, pareja: capa.pareja, tr: aLineal(capa.color.r), tg: aLineal(capa.color.g), tb: aLineal(capa.color.b) };
   });
   const pixel = (k: number): void => {
     const i = k * 4;
     for (const c of prep) {
-      const al = c.a[k];
+      const al = c.pareja && c.pareja.relleno[k] > c.a[k] ? c.pareja.relleno[k] : c.a[k];
       if (!al) continue;
-      let s = luminanciaLineal(original, i) / c.ref;
+      let s = (c.pareja ? c.pareja.luz[k] : luminanciaLineal(original, i)) / c.ref;
       if (s > 1) s = 1 + (s - 1) * 0.6;
       if (s > 1.5) s = 1.5;
       let r = c.tr * s;
