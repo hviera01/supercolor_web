@@ -20,9 +20,14 @@ import CTABand from "../components/CTABand.astro";
         apartá los que te gusten -al final los mandás por WhatsApp o los traés
         a tienda.
       </p>
-      <a href="#foto-color" class="mt-3 inline-flex items-center gap-1.5 rounded-full border border-tinta-900/10 bg-crema-50 px-4 py-1.5 text-xs font-bold text-tinta-700 transition-colors hover:border-brand-500 hover:text-brand-600 sm:mt-5 sm:text-sm">
-        ¿Tenés una foto? Buscá el color desde ahí
-      </a>
+      <div class="mt-3 flex flex-wrap justify-center gap-2 sm:mt-5">
+        <a href="#probador" class="inline-flex items-center gap-1.5 rounded-full bg-tinta-900 px-4 py-1.5 text-xs font-bold text-crema-50 transition-colors hover:bg-brand-600 sm:text-sm">
+          Probá los colores en una foto de tu casa
+        </a>
+        <a href="#foto-color" class="inline-flex items-center gap-1.5 rounded-full border border-tinta-900/10 bg-crema-50 px-4 py-1.5 text-xs font-bold text-tinta-700 transition-colors hover:border-brand-500 hover:text-brand-600 sm:text-sm">
+          ¿Tenés una foto? Buscá el color desde ahí
+        </a>
+      </div>
     </div>
   </section>
 
@@ -143,6 +148,9 @@ import CTABand from "../components/CTABand.astro";
         <a id="apartados-whatsapp" href="/contacto" class="flex flex-1 items-center justify-center rounded-2xl bg-menta-500 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-menta-600">
           Enviar por WhatsApp
         </a>
+        <button id="apartados-probar" type="button" class="rounded-2xl bg-tinta-900 px-5 py-3 text-sm font-bold text-crema-50 transition-colors hover:bg-brand-600">
+          Probar en una foto
+        </button>
         <button id="apartados-copiar" type="button" class="rounded-2xl border border-tinta-900/15 bg-crema-50 px-5 py-3 text-sm font-bold text-tinta-700 transition-colors hover:bg-crema-200">
           Copiar códigos
         </button>
@@ -205,13 +213,154 @@ import CTABand from "../components/CTABand.astro";
           Buscar combinaciones
         </button>
 
-        <div id="combinador-resultado" class="mt-6 hidden grid-cols-2 gap-3 sm:grid-cols-3"></div>
+        <div id="combinador-vista" class="mt-7 hidden">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h3 class="font-display text-xl font-bold text-tinta-900">Así se ven juntos</h3>
+            <div class="inline-flex rounded-xl border border-tinta-900/10 bg-crema-100 p-1" role="group" aria-label="Tipo de espacio">
+              <button type="button" data-escena="sala" class="escena-btn rounded-lg px-3 py-1.5 text-xs font-bold">Sala</button>
+              <button type="button" data-escena="fachada" class="escena-btn rounded-lg px-3 py-1.5 text-xs font-bold">Fachada</button>
+            </div>
+          </div>
+          <div id="combinador-escena" class="combinador-escena mt-3 overflow-hidden rounded-2xl border border-tinta-900/10 bg-crema-100"></div>
+          <div id="combinador-leyenda" class="mt-3 grid gap-2 sm:grid-cols-2"></div>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button id="combinador-invertir" type="button" class="rounded-xl border border-tinta-900/15 bg-crema-50 px-4 py-2.5 text-xs font-bold text-tinta-700 transition-colors hover:bg-crema-200">
+              Invertir colores
+            </button>
+            <button id="combinador-probar" type="button" class="rounded-xl bg-tinta-900 px-4 py-2.5 text-xs font-bold text-crema-50 transition-colors hover:bg-brand-600">
+              Probarlos en una foto real
+            </button>
+          </div>
+          <p class="mt-4 text-xs font-semibold text-tinta-500">Tocá otra opción de abajo para verla con tu color.</p>
+        </div>
+
+        <div id="combinador-resultado" class="mt-4 hidden grid-cols-2 gap-3 sm:grid-cols-3"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROBADOR EN FOTOS REALES -->
+  <section id="probador" class="py-16 sm:py-20">
+    <div class="mx-auto max-w-4xl px-5 sm:px-8">
+      <SectionKicker text="Probador" dot="bg-cielo-500" />
+      <h2 class="mt-4 font-display text-3xl font-bold text-tinta-900 sm:text-4xl">
+        Probalo en tu casa
+      </h2>
+      <p class="mt-4 max-w-2xl text-tinta-600">
+        Subí una foto de tu cuarto o de tu fachada, elegí un color del abanico
+        y tocá la pared. Se pinta solo esa pared, conservando la luz y las
+        sombras de tu foto.
+      </p>
+
+      <div class="mt-8 blob-corner border border-tinta-900/5 bg-crema-50 p-5 shadow-sm sm:p-7">
+        <div id="probador-inicio">
+          <label
+            for="probador-archivo"
+            class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-tinta-900/15 bg-crema-100 px-6 py-10 text-center transition-colors hover:border-cielo-500 hover:bg-crema-200"
+          >
+            <svg class="h-9 w-9 text-cielo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 21h18M5 21V8l7-5 7 5v13" /><path d="M9 21v-6h6v6" />
+            </svg>
+            <span class="text-sm font-bold text-tinta-900">Tocá para subir la foto de tu casa</span>
+            <span class="text-xs text-tinta-500">O sacala con la cámara: de frente, con buena luz</span>
+          </label>
+          <input id="probador-archivo" type="file" accept="image/*" class="sr-only" />
+
+          <p class="mt-6 text-xs font-bold uppercase tracking-wide text-tinta-500">O probá con una foto de ejemplo</p>
+          <div class="mt-2 grid grid-cols-3 gap-2 sm:gap-3">
+            <button type="button" data-probador-ejemplo="fachada" class="probador-ejemplo">
+              <img src="/probador/fachada-mini.jpg" alt="Fachada de una casa en Comayagua" loading="lazy" width="320" height="240" />
+              <span>Fachada</span>
+            </button>
+            <button type="button" data-probador-ejemplo="sala" class="probador-ejemplo">
+              <img src="/probador/sala-mini.jpg" alt="Sala con sillón y ventanal" loading="lazy" width="320" height="213" />
+              <span>Sala</span>
+            </button>
+            <button type="button" data-probador-ejemplo="cuarto" class="probador-ejemplo">
+              <img src="/probador/cuarto-mini.jpg" alt="Dormitorio con dos ventanas" loading="lazy" width="320" height="240" />
+              <span>Dormitorio</span>
+            </button>
+          </div>
+        </div>
+        <p id="probador-error" class="mt-3 hidden rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-700"></p>
+
+        <div id="probador-trabajo" class="hidden scroll-mt-4">
+          <p class="text-xs font-bold uppercase tracking-wide text-tinta-500">1 · Elegí el color</p>
+          <div id="probador-colores" class="-mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-1"></div>
+          <div class="relative mt-2">
+            <input
+              id="probador-buscar"
+              type="search"
+              autocomplete="off"
+              placeholder="Buscar otro color por nombre o código…"
+              class="w-full rounded-xl border border-tinta-900/10 bg-white px-4 py-2.5 text-sm focus:border-cielo-500 focus:outline-none"
+            />
+            <div id="probador-sugerencias" class="absolute z-20 mt-1 hidden max-h-64 w-full overflow-y-auto rounded-xl border border-tinta-900/10 bg-white shadow-lg"></div>
+          </div>
+
+          <p class="mt-5 text-xs font-bold uppercase tracking-wide text-tinta-500">2 · Tocá la pared</p>
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <div class="inline-flex rounded-xl border border-tinta-900/10 bg-crema-100 p-1" role="group" aria-label="Herramienta">
+              <button type="button" data-probador-modo="pintar" class="probador-modo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h12v5H4z"/><path d="M16 6.5h3v5h-8v3"/><path d="M10 14.5h2v6h-2z"/></svg>
+                Pintar zona
+              </button>
+              <button type="button" data-probador-modo="quitar" class="probador-modo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 21h10"/><path d="M5.5 13.5 13 6l5 5-7.5 7.5H8z"/></svg>
+                Quitar zona
+              </button>
+            </div>
+            <button id="probador-otra" type="button" class="probador-herr">Otra forma</button>
+            <button id="probador-deshacer" type="button" class="probador-herr">Deshacer</button>
+            <button id="probador-antes" type="button" class="probador-herr" aria-pressed="false" title="Mantené presionado para ver la foto original">Mantené: ver antes</button>
+          </div>
+
+          <div class="relative mt-3 overflow-hidden rounded-2xl bg-tinta-900/5">
+            <canvas id="probador-canvas" class="block w-full select-none" style="touch-action: manipulation" aria-label="Tu foto: tocá la pared que querés pintar"></canvas>
+            <div id="probador-marca" class="probador-marca hidden" aria-hidden="true"></div>
+            <div id="probador-estado" class="absolute inset-0 hidden flex-col items-center justify-center gap-3 bg-tinta-900/60 px-6 text-center text-sm font-bold text-crema-50 backdrop-blur-[2px]">
+              <p id="probador-estado-texto"></p>
+              <div class="h-2 w-48 overflow-hidden rounded-full bg-crema-50/25"><div id="probador-estado-barra" class="h-full w-0 rounded-full bg-sol-400 transition-[width]"></div></div>
+              <button id="probador-reintentar" type="button" class="hidden rounded-xl bg-crema-50 px-4 py-2 text-xs font-bold text-tinta-900">Intentar de nuevo</button>
+            </div>
+          </div>
+          <p id="probador-aviso" class="mt-2 min-h-[1.25rem] text-sm font-semibold text-tinta-700" aria-live="polite"></p>
+
+          <div id="probador-usados" class="mt-4 grid hidden gap-2 sm:grid-cols-2"></div>
+
+          <p class="mt-4 rounded-xl border border-sol-500/40 bg-sol-300/20 px-4 py-3 text-xs leading-relaxed text-tinta-700">
+            <b>Es una idea general del resultado.</b> El color real puede variar
+            según la luz del lugar, la cámara con que se tomó la foto, tu
+            pantalla, la textura de la pared y el acabado (mate o satinado).
+            Confirmá el tono con el abanico físico en tienda.
+          </p>
+
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button id="probador-descargar" type="button" class="rounded-2xl bg-cielo-500 px-5 py-3 text-sm font-bold text-crema-50 shadow-sm transition-colors hover:bg-cielo-600 disabled:cursor-not-allowed disabled:opacity-40">
+              Descargar la foto pintada
+            </button>
+            <button id="probador-otra-foto" type="button" class="rounded-2xl border border-tinta-900/15 bg-crema-50 px-5 py-3 text-sm font-bold text-tinta-700 transition-colors hover:bg-crema-200">
+              Usar otra foto
+            </button>
+          </div>
+        </div>
+
+        <p class="mt-5 text-xs leading-relaxed text-tinta-500">
+          Tu foto no se sube a ningún lado: se procesa dentro de tu teléfono o
+          computadora. La primera vez se descarga el detector de paredes (unos
+          25 MB, mejor con wifi) y después queda guardado.
+        </p>
+        <p class="mt-2 text-[11px] leading-relaxed text-tinta-500">
+          Fotos de ejemplo en Wikimedia Commons: fachada de Luis Alfredo Romero
+          (CC BY-SA 4.0), sala de Shixart1985 (CC BY 2.0), dormitorio de SPL
+          Interiors1 (CC BY 4.0); se muestran pintadas solo como demostración.
+        </p>
       </div>
     </div>
   </section>
 
   <!-- COLORES DESDE UNA FOTO -->
-  <section id="foto-color" class="py-16 sm:py-20">
+  <section id="foto-color" class="bg-crema-200/60 py-16 sm:py-20">
     <div class="mx-auto max-w-3xl px-5 sm:px-8">
       <SectionKicker text="Desde tu foto" dot="bg-menta-500" />
       <h2 class="mt-4 font-display text-3xl font-bold text-tinta-900 sm:text-4xl">
@@ -372,6 +521,107 @@ import CTABand from "../components/CTABand.astro";
     background: var(--color-brand-500);
     color: var(--color-crema-50);
   }
+  .escena-btn {
+    color: var(--color-tinta-700);
+  }
+  .escena-btn[aria-pressed="true"] {
+    background: var(--color-tinta-900);
+    color: var(--color-crema-50);
+  }
+  .combinador-escena :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .probador-ejemplo {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    border: 1px solid rgb(26 26 26 / 0.1);
+    background: var(--color-crema-100);
+    text-align: left;
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  .probador-ejemplo:hover {
+    transform: translateY(-2px);
+    border-color: var(--color-cielo-500);
+  }
+  .probador-ejemplo img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+  .probador-ejemplo span {
+    position: absolute;
+    left: 0.4rem;
+    bottom: 0.4rem;
+    border-radius: 9999px;
+    background: rgb(26 26 26 / 0.78);
+    padding: 0.2rem 0.6rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--color-crema-50);
+  }
+  .probador-modo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-tinta-700);
+  }
+  .probador-modo svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  .probador-modo[aria-pressed="true"] {
+    background: var(--color-tinta-900);
+    color: var(--color-crema-50);
+  }
+  .probador-herr {
+    border-radius: 0.75rem;
+    border: 1px solid rgb(26 26 26 / 0.15);
+    background: var(--color-crema-50);
+    padding: 0.55rem 0.8rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-tinta-700);
+    transition: background-color 0.12s;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+  }
+  .probador-herr:hover:not(:disabled) {
+    background: var(--color-crema-200);
+  }
+  .probador-herr:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .probador-herr[aria-pressed="true"] {
+    background: var(--color-tinta-900);
+    color: var(--color-crema-50);
+  }
+  .probador-marca {
+    position: absolute;
+    width: 2.6rem;
+    height: 2.6rem;
+    margin: -1.3rem 0 0 -1.3rem;
+    border-radius: 9999px;
+    border: 3px solid #fff;
+    border-top-color: var(--color-cielo-500);
+    box-shadow: 0 0 0 2px rgb(26 26 26 / 0.45);
+    pointer-events: none;
+    animation: probador-giro 0.8s linear infinite;
+  }
+  @keyframes probador-giro {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 </style>
 
 <style is:global>
@@ -456,6 +706,50 @@ import CTABand from "../components/CTABand.astro";
     .paleta-celda:focus-within .corazon-btn {
       opacity: 1;
     }
+  }
+
+  .probador-chip {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 13rem;
+    border-radius: 0.9rem;
+    border: 2px solid transparent;
+    background: var(--color-crema-100);
+    padding: 0.35rem 0.7rem 0.35rem 0.35rem;
+    text-align: left;
+    transition: border-color 0.12s, background-color 0.12s;
+  }
+  .probador-chip i {
+    display: block;
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+    border-radius: 0.6rem;
+    border: 1px solid rgb(26 26 26 / 0.15);
+  }
+  .probador-chip span {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    line-height: 1.15;
+  }
+  .probador-chip b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    color: var(--color-tinta-900);
+  }
+  .probador-chip small {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.68rem;
+    color: var(--color-tinta-500);
+  }
+  .probador-chip[aria-pressed="true"] {
+    border-color: var(--color-tinta-900);
+    background: var(--color-crema-50);
   }
 
   .familia-tarjeta {
@@ -794,6 +1088,8 @@ import CTABand from "../components/CTABand.astro";
     quitarApartado,
     vaciarApartados,
   } from "../lib/colores-apartados";
+  import { iniciarProbador } from "../lib/probador";
+  import { escenaFachada, escenaSala } from "../lib/vista-combinacion";
   import { fetchConfiguracion } from "../lib/content";
   import { enlaceWhatsapp } from "../lib/site-chrome";
   import { escapeHtml } from "../lib/render-utils";
@@ -807,6 +1103,7 @@ import CTABand from "../components/CTABand.astro";
 
   const paleta: ColorEnriquecido[] = enriquecerColores(datosColores as ColorLanco[]);
   const porCodigo = new Map(paleta.map((c) => [c.codigo, c]));
+  const probador = iniciarProbador(paleta, porCodigo);
   const claveDe = new Map<string, string>();
 
   const contador = document.getElementById("colores-contador") as HTMLElement;
@@ -929,6 +1226,7 @@ import CTABand from "../components/CTABand.astro";
           </div>
           <div class="franja-acciones">
             <button type="button" data-combinar="${escapeHtml(c.codigo)}">Ideas para combinarlo</button>
+            <button type="button" data-probar="${escapeHtml(c.codigo)}">Probarlo en una foto</button>
             <button type="button" data-grande="${escapeHtml(c.codigo)}">Ver en pantalla completa</button>
           </div>
         </div>`,
@@ -1210,6 +1508,12 @@ import CTABand from "../components/CTABand.astro";
     if (combinar) {
       const color = porCodigo.get(combinar.dataset.combinar!);
       if (color) elegirColorCombinador(color);
+      return;
+    }
+    const probar = destino.closest("button[data-probar]") as HTMLButtonElement | null;
+    if (probar) {
+      const color = porCodigo.get(probar.dataset.probar!);
+      if (color) probador.probarColores([color]);
     }
   });
 
@@ -1559,6 +1863,12 @@ import CTABand from "../components/CTABand.astro";
     if (color) abrirDetalle(color, coloresApartados(), boton);
   });
 
+  document.getElementById("apartados-probar")?.addEventListener("click", () => {
+    const lista = coloresApartados();
+    cerrarPanel();
+    probador.probarColores(lista);
+  });
+
   document.getElementById("apartados-vaciar")?.addEventListener("click", () => {
     if (confirm("¿Quitar todos los colores apartados?")) vaciarApartados();
   });
@@ -1621,6 +1931,10 @@ import CTABand from "../components/CTABand.astro";
 
   function elegirColorCombinador(color: ColorEnriquecido): void {
     colorElegido = color;
+    comboAcento = null;
+    pintarVistaCombo();
+    comboResultado.classList.add("hidden");
+    comboResultado.classList.remove("grid");
     comboBuscar.value = "";
     comboSugerencias.classList.add("hidden");
     comboElegido.classList.remove("hidden");
@@ -1675,31 +1989,108 @@ import CTABand from "../components/CTABand.astro";
 
   function sugerenciaHtml(s: ReturnType<typeof combinador>[number]): string {
     return `
-      <div class="rounded-2xl border border-tinta-900/5 bg-crema-100 p-3">
-        <button type="button" data-codigo="${escapeHtml(s.color.codigo)}" class="block w-full text-left" aria-label="Ver ${escapeHtml(s.color.nombre)} en grande">
-          <div class="h-16 w-full rounded-lg" style="background:${s.color.hex}"></div>
+      <div class="combo-opcion rounded-2xl border-2 border-transparent bg-crema-100 p-3 transition-colors" data-opcion="${escapeHtml(s.color.codigo)}">
+        <button type="button" data-elegir-combo="${escapeHtml(s.color.codigo)}" class="block w-full text-left" aria-label="Ver ${escapeHtml(s.color.nombre)} junto a tu color">
+          <div class="flex h-16 w-full overflow-hidden rounded-lg">
+            <span class="w-1/3" style="background:${colorElegido?.hex ?? s.color.hex}"></span>
+            <span class="flex-1" style="background:${s.color.hex}"></span>
+          </div>
           <p class="mt-2 truncate text-xs font-bold text-tinta-900">${escapeHtml(s.color.nombre)}</p>
           <p class="font-mono text-[11px] text-tinta-500">${escapeHtml(s.color.codigo)}</p>
         </button>
         <p class="mt-1.5 text-[11px] capitalize text-brand-600">${escapeHtml(s.tipo)}</p>
         <p class="mt-1 text-[11px] leading-snug text-tinta-600">${escapeHtml(s.descripcion)}</p>
+        <button type="button" data-codigo="${escapeHtml(s.color.codigo)}" class="mt-2 text-[11px] font-bold text-tinta-700 underline decoration-tinta-900/20 underline-offset-2 hover:text-brand-600">Ver en grande</button>
       </div>`;
   }
+
+  // ---------- Vista de la combinación ----------
+  const comboVista = document.getElementById("combinador-vista") as HTMLElement;
+  const comboEscena = document.getElementById("combinador-escena") as HTMLElement;
+  const comboLeyenda = document.getElementById("combinador-leyenda") as HTMLElement;
+  const botonesEscena = document.querySelectorAll<HTMLButtonElement>("[data-escena]");
+  let escena: "sala" | "fachada" = "sala";
+  let comboAcento: ColorEnriquecido | null = null;
+  let comboInvertido = false;
+
+  function pintarVistaCombo(): void {
+    if (!colorElegido || !comboAcento) {
+      comboVista.classList.add("hidden");
+      return;
+    }
+    const principal = comboInvertido ? comboAcento : colorElegido;
+    const acento = comboInvertido ? colorElegido : comboAcento;
+    comboVista.classList.remove("hidden");
+    botonesEscena.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.escena === escena)));
+    comboEscena.innerHTML = escena === "sala" ? escenaSala(principal.hex, acento.hex) : escenaFachada(principal.hex, acento.hex);
+    const fila = (c: ColorEnriquecido, rol: string) => `
+      <button type="button" data-codigo="${escapeHtml(c.codigo)}" class="flex items-center gap-3 rounded-xl bg-crema-100 p-2.5 text-left transition-colors hover:bg-crema-200">
+        <span class="h-9 w-9 shrink-0 rounded-lg border border-tinta-900/10" style="background:${c.hex}"></span>
+        <span class="min-w-0">
+          <span class="block text-[11px] font-semibold uppercase tracking-wide text-tinta-500">${rol}</span>
+          <span class="block truncate text-sm font-bold text-tinta-900">${escapeHtml(c.nombre)} <span class="font-mono text-xs font-normal text-tinta-500">${escapeHtml(c.codigo)}</span></span>
+        </span>
+      </button>`;
+    comboLeyenda.innerHTML =
+      fila(principal, escena === "sala" ? "Paredes" : "Muros") + fila(acento, escena === "sala" ? "Pared de acento y detalles" : "Marcos, columnas y zócalo");
+    comboResultado.querySelectorAll<HTMLElement>("[data-opcion]").forEach((el) => {
+      const sel = el.dataset.opcion === comboAcento!.codigo;
+      el.classList.toggle("border-tinta-900", sel);
+      el.classList.toggle("border-transparent", !sel);
+    });
+  }
+
+  function elegirAcento(c: ColorEnriquecido, desplazar: boolean): void {
+    comboAcento = c;
+    comboInvertido = false;
+    pintarVistaCombo();
+    if (desplazar) comboVista.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  botonesEscena.forEach((b) =>
+    b.addEventListener("click", () => {
+      escena = b.dataset.escena as typeof escena;
+      pintarVistaCombo();
+    }),
+  );
+  document.getElementById("combinador-invertir")?.addEventListener("click", () => {
+    comboInvertido = !comboInvertido;
+    pintarVistaCombo();
+  });
+  document.getElementById("combinador-probar")?.addEventListener("click", () => {
+    if (!colorElegido || !comboAcento) return;
+    probador.probarColores(comboInvertido ? [comboAcento, colorElegido] : [colorElegido, comboAcento]);
+  });
+  comboLeyenda.addEventListener("click", (e) => {
+    const b = (e.target as HTMLElement).closest("button[data-codigo]") as HTMLButtonElement | null;
+    const c = b ? porCodigo.get(b.dataset.codigo!) : undefined;
+    if (c && b) abrirDetalle(c, [colorElegido!, comboAcento!].filter(Boolean), b);
+  });
 
   comboBtn.addEventListener("click", () => {
     if (!colorElegido) return;
     const objetivo = (comboObjetivo.value || undefined) as ObjetivoCombinacion | undefined;
     const area = comboArea.value || undefined;
     const sugerencias = combinador(colorElegido, paleta, { objetivo, area });
+    escena = area === "Fachada / Exterior" ? "fachada" : "sala";
     comboResultado.classList.remove("hidden");
     comboResultado.classList.add("grid");
     comboResultado.innerHTML = sugerencias.map(sugerenciaHtml).join("");
     sugerenciasActuales = sugerencias.map((x) => x.color);
+    if (sugerencias.length) elegirAcento(sugerencias[0].color, false);
+    else pintarVistaCombo();
   });
 
   let sugerenciasActuales: ColorEnriquecido[] = [];
   comboResultado.addEventListener("click", (e) => {
-    const boton = (e.target as HTMLElement).closest("button[data-codigo]") as HTMLButtonElement | null;
+    const destino = e.target as HTMLElement;
+    const elegir = destino.closest("button[data-elegir-combo]") as HTMLButtonElement | null;
+    if (elegir) {
+      const c = porCodigo.get(elegir.dataset.elegirCombo!);
+      if (c) elegirAcento(c, true);
+      return;
+    }
+    const boton = destino.closest("button[data-codigo]") as HTMLButtonElement | null;
     if (!boton) return;
     const color = porCodigo.get(boton.dataset.codigo!);
     if (color) abrirDetalle(color, sugerenciasActuales, boton);
