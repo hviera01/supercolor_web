@@ -54,7 +54,7 @@ interface Foto {
   ia?: "buscando" | "lista" | "fallo";
 }
 
-const URL_RECONOCER: string = import.meta.env.PUBLIC_RECONOCER_URL ?? "";
+const URL_RECONOCER: string = import.meta.env.PUBLIC_RECONOCER_URL ?? "https://supercolor-reconocer.factura-scanner.workers.dev";
 
 export interface Probador {
   probarColores(colores: ColorEnriquecido[]): void;
