@@ -101,8 +101,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   const zonaFoto = $("probador-zona-foto");
   const textoPropuesta = $("probador-propuesta-texto");
   const btnPropSi = $<HTMLButtonElement>("probador-prop-si");
-  const btnPropMas = $<HTMLButtonElement>("probador-prop-mas");
-  const btnPropMenos = $<HTMLButtonElement>("probador-prop-menos");
+  const btnPropCambiar = $<HTMLButtonElement>("probador-prop-cambiar");
   const chipLimite = $("probador-limite-chip");
   const btnPropMarcar = $<HTMLButtonElement>("probador-prop-marcar");
   const btnPropNo = $<HTMLButtonElement>("probador-prop-no");
@@ -1076,11 +1075,11 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
         return;
       }
     }
-    proponer({ f, op, codigo, alfa: recortarAlLimite(f, r.alfa), opciones: r.opciones, hayMas: r.hayMas, hayMenos: r.hayMenos, ancla: { cx, cy } });
+    proponer({ f, op, codigo, alfa: recortarAlLimite(f, r.alfa), opciones: r.opciones, ancla: { cx, cy } });
   }
 
   // ---------- Vista previa de la zona antes de pintar ----------
-  let propuesta: { f: Foto; op: Modo; codigo: string; alfa: Uint8Array; opciones: number; lazo?: boolean; hayMas?: boolean; hayMenos?: boolean; ancla?: { cx: number; cy: number }; img?: HTMLCanvasElement } | null = null;
+  let propuesta: { f: Foto; op: Modo; codigo: string; alfa: Uint8Array; opciones: number; lazo?: boolean; ancla?: { cx: number; cy: number }; img?: HTMLCanvasElement } | null = null;
 
   function recortarAlLimite(f: Foto, alfa: Uint8Array): Uint8Array {
     if (!f.limite) return alfa;
@@ -1134,10 +1133,8 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     const quitar = p.op === "quitar";
     textoPropuesta.textContent = p.lazo ? "¿Pintamos toda el área azul?" : quitar ? "¿Quitamos lo rojo?" : "¿Pintamos lo azul?";
     btnPropSi.textContent = p.lazo ? "Pintar toda" : quitar ? "Quitar" : "Pintar";
-    btnPropMas.classList.toggle("hidden", !!p.lazo);
-    btnPropMenos.classList.toggle("hidden", !!p.lazo);
-    btnPropMas.disabled = !p.hayMas;
-    btnPropMenos.disabled = !p.hayMenos;
+    btnPropCambiar.classList.toggle("hidden", !!p.lazo);
+    btnPropCambiar.disabled = p.opciones < 2;
     btnPropMarcar.textContent = p.lazo ? "Con pincel" : "Marcar a mano";
     btnPropSi.disabled = false;
     cajaPropuesta.style.visibility = "hidden";
@@ -1149,7 +1146,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
         ? "Se pinta exactamente lo que rodeaste. Si te quedó chico o grande, tocá “Cancelar” y volvé a rodearlo."
         : quitar
         ? "Revisá lo marcado en rojo antes de quitarlo."
-        : "Revisá lo marcado en azul. Si agarró de más o de menos, tocá “Agarrar más” o “Agarrar menos”.",
+        : "Revisá lo marcado en azul. Si no es lo que querías, tocá “Cambiar selección”.",
     );
     actualizarBotones();
   }
@@ -1193,24 +1190,23 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     avisar(p.op === "pared" ? "Pintado. Tocá otra parte para seguir, o usá el pincel fino para los detalles." : "Listo, se quitó esa zona.");
   });
 
-  async function otroTamanoPropuesta(dir: number): Promise<void> {
+  async function cambiarSeleccion(): Promise<void> {
     const p = propuesta;
     if (!p || ocupado) return;
     ocupado = true;
-    btnPropMas.disabled = btnPropMenos.disabled = btnPropSi.disabled = true;
-    textoPropuesta.textContent = dir > 0 ? "Buscando un recorte más grande…" : "Buscando un recorte más chico…";
-    const r = await pedir({ tipo: "otra", clave: p.f.clave, dir });
+    btnPropCambiar.disabled = btnPropSi.disabled = true;
+    textoPropuesta.textContent = "Buscando otra selección…";
+    const r = await pedir({ tipo: "otra", clave: p.f.clave });
     ocupado = false;
     if (propuesta !== p) return;
     if (r.tipo === "zona") {
-      proponer({ ...p, alfa: recortarAlLimite(p.f, r.alfa), opciones: r.opciones, hayMas: r.hayMas, hayMenos: r.hayMenos, img: undefined });
+      proponer({ ...p, alfa: recortarAlLimite(p.f, r.alfa), opciones: r.opciones, img: undefined });
     } else {
-      proponer({ ...p, img: undefined, hayMas: dir > 0 ? false : p.hayMas, hayMenos: dir < 0 ? false : p.hayMenos });
-      avisar(dir > 0 ? "No hay un recorte más grande. Probá “Marcar a mano”." : "No hay un recorte más chico. Probá “Marcar a mano”.");
+      proponer({ ...p, img: undefined, opciones: 1 });
+      avisar("No hay otra selección. Probá “Marcar a mano”.");
     }
   }
-  btnPropMas.addEventListener("click", () => void otroTamanoPropuesta(1));
-  btnPropMenos.addEventListener("click", () => void otroTamanoPropuesta(-1));
+  btnPropCambiar.addEventListener("click", () => void cambiarSeleccion());
 
   btnPropMarcar.addEventListener("click", () => {
     if (!propuesta) return;

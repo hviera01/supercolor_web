@@ -26,7 +26,7 @@ env.allowLocalModels = false;
 type Entrada =
   | { tipo: "foto"; id: number; clave: number; rgba: Uint8ClampedArray; ancho: number; alto: number }
   | { tipo: "zona"; id: number; clave: number; x: number; y: number }
-  | { tipo: "otra"; id: number; clave: number; dir?: number }
+  | { tipo: "otra"; id: number; clave: number }
   | { tipo: "olvidar"; id: number; clave: number };
 
 interface EstadoFoto {
@@ -37,7 +37,7 @@ interface EstadoFoto {
   guia: Float32Array;
   canales: CanalesFoto;
   croma: CromaFoto;
-  ultimo: { logits: Float32Array[]; orden: number[]; areas: number[]; actual: number; x: number; y: number } | null;
+  ultimo: { logits: Float32Array[]; orden: number[]; areas: number[]; actual: number; x: number; y: number; hechas: (Uint8Array | undefined)[] } | null;
 }
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
@@ -149,30 +149,19 @@ function terminarZona(f: EstadoFoto, logits: Float32Array, x: number, y: number)
   return refinarMascara(binaria, f.guia, f.ancho, f.alto, f.canales);
 }
 
-// Los tres recortes del detector suelen ser de distinto tamaño (un recuadro,
-// la pared, toda la fachada): "Agarrar más" o "Agarrar menos" pasa al
-// siguiente más grande o más chico.
-function tamanos(u: NonNullable<EstadoFoto["ultimo"]>): { hayMas: boolean; hayMenos: boolean } {
-  const a = u.areas[u.orden[u.actual]];
-  return {
-    hayMas: u.orden.some((i) => u.areas[i] > a * 1.08),
-    hayMenos: u.orden.some((i) => u.areas[i] < a * 0.92 && u.areas[i] > 0),
-  };
+function zonaGuardada(f: EstadoFoto, u: NonNullable<EstadoFoto["ultimo"]>, i: number): Uint8Array {
+  u.hechas[i] ??= terminarZona(f, u.logits[i], u.x, u.y);
+  return u.hechas[i]!.slice();
 }
 
-function otroTamano(f: EstadoFoto, dir: number): Uint8Array | null {
-  const u = f.ultimo;
-  if (!u) return null;
-  const a = u.areas[u.orden[u.actual]];
-  let elegido = -1;
-  for (const i of u.orden) {
-    const b = u.areas[i];
-    if (dir > 0 && b > a * 1.08 && (elegido < 0 || b < u.areas[elegido])) elegido = i;
-    if (dir < 0 && b < a * 0.92 && b > 0 && (elegido < 0 || b > u.areas[elegido])) elegido = i;
+function parecidas(a: Uint8Array, b: Uint8Array): boolean {
+  let inter = 0, union = 0;
+  for (let k = 0; k < a.length; k++) {
+    const x = a[k] > 127, y = b[k] > 127;
+    if (x && y) inter++;
+    if (x || y) union++;
   }
-  if (elegido < 0) return null;
-  u.actual = u.orden.indexOf(elegido);
-  return terminarZona(f, u.logits[elegido], u.x, u.y);
+  return union === 0 || inter / union > 0.93;
 }
 
 async function zona(f: EstadoFoto, x: number, y: number): Promise<{ alfa: Uint8Array; opciones: number }> {
@@ -193,15 +182,23 @@ async function zona(f: EstadoFoto, x: number, y: number): Promise<{ alfa: Uint8A
     for (let k = 0; k < l.length; k++) if (l[k] > 0) n++;
     return n;
   });
-  f.ultimo = { logits, orden, areas, actual: 0, x, y };
-  return { alfa: terminarZona(f, logits[orden[0]], x, y), opciones: orden.length };
+  f.ultimo = { logits, orden, areas, actual: 0, x, y, hechas: [] };
+  return { alfa: zonaGuardada(f, f.ultimo, orden[0]), opciones: orden.length };
 }
 
 function otraForma(f: EstadoFoto): Uint8Array | null {
   const u = f.ultimo;
   if (!u || u.orden.length < 2) return null;
-  u.actual = (u.actual + 1) % u.orden.length;
-  return terminarZona(f, u.logits[u.orden[u.actual]], u.x, u.y);
+  const vista = u.hechas[u.orden[u.actual]];
+  for (let paso = 1; paso < u.orden.length; paso++) {
+    const cand = (u.actual + paso) % u.orden.length;
+    const alfa = zonaGuardada(f, u, u.orden[cand]);
+    if (vista && cand !== 0 && parecidas(alfa, vista)) continue;
+    u.actual = cand;
+    return alfa;
+  }
+  u.actual = 0;
+  return zonaGuardada(f, u, u.orden[0]);
 }
 
 async function atender(m: Entrada): Promise<void> {
@@ -222,10 +219,10 @@ async function atender(m: Entrada): Promise<void> {
     }
     if (m.tipo === "zona") {
       const { alfa, opciones } = await zona(f, Math.round(m.x), Math.round(m.y));
-      ctx.postMessage({ tipo: "zona", id: m.id, alfa, opciones, ...tamanos(f.ultimo!) }, [alfa.buffer]);
+      ctx.postMessage({ tipo: "zona", id: m.id, alfa, opciones }, [alfa.buffer]);
     } else {
-      const alfa = m.dir ? otroTamano(f, m.dir) : otraForma(f);
-      if (alfa) ctx.postMessage({ tipo: "zona", id: m.id, alfa, opciones: f.ultimo?.orden.length ?? 1, ...tamanos(f.ultimo!) }, [alfa.buffer]);
+      const alfa = otraForma(f);
+      if (alfa) ctx.postMessage({ tipo: "zona", id: m.id, alfa, opciones: f.ultimo?.orden.length ?? 1 }, [alfa.buffer]);
       else ctx.postMessage({ tipo: "sin-otra", id: m.id });
     }
   } catch (err) {
