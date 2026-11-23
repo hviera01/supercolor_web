@@ -6,5 +6,16 @@
   "ratelimits": [
     { "name": "LIMITE", "namespace_id": "1001", "simple": { "limit": 4, "period": 60 } }
   ],
+  "kv_namespaces": [
+    { "binding": "DATOS", "id": "693092fcd30746e0bc7dfde51a156525" }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "CUPO", "class_name": "Cupo" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Cupo"] }],
+  "vars": {
+    "FOTOS_POR_DIA": "60",
+    "FOTOS_POR_PERSONA_DIA": "8"
+  },
   "observability": { "enabled": true }
 }

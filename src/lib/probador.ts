@@ -506,22 +506,33 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     chipIa.classList.toggle("hidden", f.ia !== "buscando");
   }
 
-  async function reconocer(f: Foto): Promise<void> {
-    if (!URL_RECONOCER) return;
+  async function reconocer(f: Foto, ejemplo?: string): Promise<void> {
+    if (!URL_RECONOCER && !ejemplo) return;
     f.ia = "buscando";
     mostrarIa(f);
     try {
-      const envio = fotoParaClaude(f);
-      const control = new AbortController();
-      const corte = setTimeout(() => control.abort(), 120000);
-      const resp = await fetch(URL_RECONOCER, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(envio),
-        signal: control.signal,
-      }).finally(() => clearTimeout(corte));
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const datos = await resp.json();
+      let envio: { ancho: number; alto: number };
+      let datos: unknown;
+      if (ejemplo) {
+        const resp = await fetch(`/probador/${ejemplo}.superficies.json`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const guardado = await resp.json();
+        envio = { ancho: guardado.ancho, alto: guardado.alto };
+        datos = guardado;
+      } else {
+        const foto = fotoParaClaude(f);
+        envio = foto;
+        const control = new AbortController();
+        const corte = setTimeout(() => control.abort(), 120000);
+        const resp = await fetch(URL_RECONOCER, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(foto),
+          signal: control.signal,
+        }).finally(() => clearTimeout(corte));
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        datos = await resp.json();
+      }
       if (!fotos.includes(f)) return;
       const id = siguienteSup++;
       const rgba = new Uint8ClampedArray(f.original.data);
@@ -1499,7 +1510,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     error.classList.remove("hidden");
   }
 
-  async function cargar(fuente: Blob): Promise<void> {
+  async function cargar(fuente: Blob, ejemplo?: string): Promise<void> {
     error.classList.add("hidden");
     if (fotos.length >= MAX_FOTOS) {
       mostrarError(`Podés trabajar con ${MAX_FOTOS} fotos a la vez. Quitá una para agregar otra.`);
@@ -1518,7 +1529,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     pintarColores();
     mostrarFoto(f);
     trabajo.scrollIntoView({ behavior: "smooth", block: "start" });
-    void reconocer(f);
+    void reconocer(f, ejemplo);
     void analizar(f);
   }
 
@@ -1548,7 +1559,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       try {
         const res = await fetch(`/probador/${b.dataset.probadorEjemplo}.jpg`);
         if (!res.ok) throw new Error();
-        await cargar(await res.blob());
+        await cargar(await res.blob(), b.dataset.probadorEjemplo);
       } catch {
         mostrarError("No pudimos abrir la foto de ejemplo. Revisá tu conexión.");
       }
