@@ -52,6 +52,7 @@ interface Foto {
   /** Superficies que reconoció Claude en la foto. */
   superficies?: MapaSuperficies;
   ia?: "buscando" | "lista" | "fallo";
+  iaDesde?: number;
 }
 
 const URL_RECONOCER: string = import.meta.env.PUBLIC_RECONOCER_URL ?? "https://supercolor-reconocer.factura-scanner.workers.dev";
@@ -109,7 +110,6 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   const btnPropSi = $<HTMLButtonElement>("probador-prop-si");
   const btnPropCambiar = $<HTMLButtonElement>("probador-prop-cambiar");
   const chipLimite = $("probador-limite-chip");
-  const chipIa = $("probador-ia-chip");
   const btnPropMarcar = $<HTMLButtonElement>("probador-prop-marcar");
   const btnPropNo = $<HTMLButtonElement>("probador-prop-no");
   const error = $("probador-error");
@@ -156,7 +156,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
           reiniciarWorker();
           fallo("La descarga del detector se detuvo. Revisá tu conexión e intentá de nuevo.");
         });
-        if (actual && !usable(actual)) mostrarEstado(`Preparando el detector de paredes… ${m.porcentaje}%`, m.porcentaje, "Solo la primera vez; después queda guardado.");
+        if (actual && !usable(actual) && actual.ia !== "buscando") mostrarEstado(`Preparando el detector de paredes… ${m.porcentaje}%`, m.porcentaje, "Solo la primera vez; después queda guardado.");
         return;
       }
       if (m.tipo === "analizando") {
@@ -164,7 +164,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
           reiniciarWorker();
           fallo(LENTO);
         });
-        if (actual && actual.clave === m.clave && !usable(actual)) mostrarEstado("Analizando tu foto…", -1, "Puede tardar unos segundos.");
+        if (actual && actual.clave === m.clave && !usable(actual) && actual.ia !== "buscando") mostrarEstado("Analizando tu foto…", -1, "Puede tardar unos segundos.");
         return;
       }
       const fn = pendientes.get(m.id);
@@ -191,7 +191,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   }
 
   async function analizar(f: Foto): Promise<void> {
-    if (actual === f && !usable(f)) mostrarEstado("Preparando el detector de paredes…", 0);
+    if (actual === f && !usable(f) && f.ia !== "buscando") mostrarEstado("Preparando el detector de paredes…", 0);
     vigilar(90000, () => {
       reiniciarWorker();
       fallo("No pudimos preparar el detector. Revisá tu conexión e intentá de nuevo.");
@@ -203,7 +203,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     if (r.tipo === "lista") {
       f.lista = true;
       seccion.dataset.listo = "1";
-      if (actual === f) {
+      if (actual === f && f.ia !== "buscando") {
         ocultarEstado();
         avisarListo();
       }
@@ -228,11 +228,15 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     estado.classList.remove("flex");
   }
 
+  let falloPendiente: string | null = null;
+
   function fallo(texto: string): void {
-    if (actual?.superficies) {
+    if (actual?.superficies || actual?.ia === "buscando") {
       console.warn("probador: detector", texto);
+      if (actual?.ia === "buscando") falloPendiente = texto;
       return;
     }
+    falloPendiente = null;
     estado.classList.remove("hidden");
     estado.classList.add("flex");
     estadoTexto.textContent = texto;
@@ -501,14 +505,54 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     return { imagen: c.toDataURL("image/jpeg", 0.88).split(",")[1], ancho: c.width, alto: c.height };
   }
 
+  // Mientras Claude reconoce la foto se muestra una barra en el centro y no
+  // se puede tocar; al terminar dice "Listo" un momento y deja la foto limpia.
+  let relojIa: number | null = null;
+
   function mostrarIa(f: Foto): void {
     if (actual !== f) return;
-    chipIa.classList.toggle("hidden", f.ia !== "buscando");
+    if (relojIa !== null) {
+      clearInterval(relojIa);
+      relojIa = null;
+    }
+    if (f.ia !== "buscando") return;
+    const desde = f.iaDesde ?? performance.now();
+    const pintar = () => {
+      if (actual !== f || f.ia !== "buscando") return;
+      const t = (performance.now() - desde) / 1000;
+      const pct = Math.round(95 * (1 - Math.exp(-t / 13)));
+      mostrarEstado("Reconociendo las paredes de tu foto…", pct, "Tarda unos segundos. Después tocás una pared y se marca entera.");
+    };
+    pintar();
+    relojIa = window.setInterval(pintar, 250);
+  }
+
+  function terminarIa(f: Foto): void {
+    mostrarIa(f);
+    if (actual !== f) return;
+    if (f.ia === "lista") {
+      mostrarEstado("¡Listo! Ya podés pintar", 100);
+      window.setTimeout(() => {
+        if (actual === f && f.ia === "lista") {
+          ocultarEstado();
+          avisar(textoModo());
+        }
+      }, 1300);
+    } else if (f.lista) {
+      ocultarEstado();
+      avisar(textoModo());
+    } else if (falloPendiente) {
+      fallo(falloPendiente);
+    } else {
+      mostrarEstado("Analizando tu foto…", -1, "Puede tardar unos segundos.");
+    }
+    actualizarBotones();
   }
 
   async function reconocer(f: Foto, ejemplo?: string): Promise<void> {
     if (!URL_RECONOCER && !ejemplo) return;
     f.ia = "buscando";
+    f.iaDesde = performance.now();
     mostrarIa(f);
     try {
       let envio: { ancho: number; alto: number };
@@ -554,19 +598,14 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       if (r.error || !r.lista?.length) throw new Error(r.error ?? "sin superficies");
       f.superficies = { lista: r.lista, etiquetas: r.etiquetas, ancho: f.original.width, alto: f.original.height };
       f.ia = "lista";
-      if (actual === f) {
-        ocultarEstado();
-        avisar(activo ? `Listo: ya reconocimos las paredes. Tocá la que querés pintar de ${activo.nombre}.` : "Listo: ya reconocimos las paredes. Elegí un color y tocá una.");
-        actualizarBotones();
-      }
     } catch (err) {
       console.warn("probador: Claude no reconoció la foto", err);
       f.ia = "fallo";
     }
-    mostrarIa(f);
+    if (fotos.includes(f)) terminarIa(f);
   }
 
-  const usable = (f: Foto) => f.lista || !!f.superficies;
+  const usable = (f: Foto) => f.ia !== "buscando" && (f.lista || !!f.superficies);
 
   // ---------- Disimular desperfectos ----------
   let disimular = false;
@@ -1441,8 +1480,9 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     btnAlejar.disabled = true;
     btnAcercar.disabled = false;
     aplicarModo();
-    mostrarIa(f);
-    if (usable(f)) {
+    if (f.ia === "buscando") {
+      mostrarIa(f);
+    } else if (usable(f)) {
       ocultarEstado();
       avisar(textoModo());
     } else {
