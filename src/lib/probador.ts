@@ -20,6 +20,7 @@ import {
   type Region,
   type Tono,
 } from "./pintar-foto";
+import { mascaraSuperficie, superficieEn, type MapaSuperficies } from "./superficies";
 
 interface Capa {
   color: ColorEnriquecido;
@@ -48,7 +49,12 @@ interface Foto {
   croma?: CromaFoto;
   /** Área marcada a mano: si existe, no se pinta nada fuera de ella. */
   limite?: Uint8Array;
+  /** Superficies que reconoció Claude en la foto. */
+  superficies?: MapaSuperficies;
+  ia?: "buscando" | "lista" | "fallo";
 }
+
+const URL_RECONOCER: string = import.meta.env.PUBLIC_RECONOCER_URL ?? "";
 
 export interface Probador {
   probarColores(colores: ColorEnriquecido[]): void;
@@ -103,6 +109,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   const btnPropSi = $<HTMLButtonElement>("probador-prop-si");
   const btnPropCambiar = $<HTMLButtonElement>("probador-prop-cambiar");
   const chipLimite = $("probador-limite-chip");
+  const chipIa = $("probador-ia-chip");
   const btnPropMarcar = $<HTMLButtonElement>("probador-prop-marcar");
   const btnPropNo = $<HTMLButtonElement>("probador-prop-no");
   const error = $("probador-error");
@@ -149,7 +156,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
           reiniciarWorker();
           fallo("La descarga del detector se detuvo. Revisá tu conexión e intentá de nuevo.");
         });
-        if (actual && !actual.lista) mostrarEstado(`Preparando el detector de paredes… ${m.porcentaje}%`, m.porcentaje, "Solo la primera vez; después queda guardado.");
+        if (actual && !usable(actual)) mostrarEstado(`Preparando el detector de paredes… ${m.porcentaje}%`, m.porcentaje, "Solo la primera vez; después queda guardado.");
         return;
       }
       if (m.tipo === "analizando") {
@@ -157,7 +164,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
           reiniciarWorker();
           fallo(LENTO);
         });
-        if (actual && actual.clave === m.clave) mostrarEstado("Analizando tu foto…", -1, "Puede tardar unos segundos.");
+        if (actual && actual.clave === m.clave && !usable(actual)) mostrarEstado("Analizando tu foto…", -1, "Puede tardar unos segundos.");
         return;
       }
       const fn = pendientes.get(m.id);
@@ -184,7 +191,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   }
 
   async function analizar(f: Foto): Promise<void> {
-    if (actual === f) mostrarEstado("Preparando el detector de paredes…", 0);
+    if (actual === f && !usable(f)) mostrarEstado("Preparando el detector de paredes…", 0);
     vigilar(90000, () => {
       reiniciarWorker();
       fallo("No pudimos preparar el detector. Revisá tu conexión e intentá de nuevo.");
@@ -222,6 +229,10 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   }
 
   function fallo(texto: string): void {
+    if (actual?.superficies) {
+      console.warn("probador: detector", texto);
+      return;
+    }
     estado.classList.remove("hidden");
     estado.classList.add("flex");
     estadoTexto.textContent = texto;
@@ -449,6 +460,102 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     actualizarBotones();
     pedirParejas(f);
   }
+
+  // ---------- Paredes reconocidas por Claude ----------
+  // Apenas se sube la foto, Claude devuelve el contorno de cada superficie
+  // (pared, columnas, recuadros, cerámica…). Con eso, tocar una pared la
+  // marca entera y con bordes rectos. Si no responde, queda el detector.
+  let workerSup: Worker | null = null;
+  let siguienteSup = 1;
+  const esperandoSup = new Map<number, (r: any) => void>();
+
+  function trabajadorSup(): Worker {
+    if (workerSup) return workerSup;
+    const w = new Worker(new URL("./superficies-worker.ts", import.meta.url), { type: "module" });
+    w.onmessage = (e) => {
+      const fin = esperandoSup.get(e.data.id);
+      esperandoSup.delete(e.data.id);
+      fin?.(e.data);
+    };
+    w.onerror = () => {
+      workerSup?.terminate();
+      workerSup = null;
+      for (const fin of esperandoSup.values()) fin({ error: "worker" });
+      esperandoSup.clear();
+    };
+    workerSup = w;
+    return w;
+  }
+
+  function fotoParaClaude(f: Foto): { imagen: string; ancho: number; alto: number } {
+    const lado = 1024;
+    const escala = Math.min(1, lado / Math.max(f.original.width, f.original.height));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(f.original.width * escala));
+    c.height = Math.max(1, Math.round(f.original.height * escala));
+    const fuente = document.createElement("canvas");
+    fuente.width = f.original.width;
+    fuente.height = f.original.height;
+    fuente.getContext("2d")!.putImageData(f.original, 0, 0);
+    c.getContext("2d")!.drawImage(fuente, 0, 0, c.width, c.height);
+    return { imagen: c.toDataURL("image/jpeg", 0.88).split(",")[1], ancho: c.width, alto: c.height };
+  }
+
+  function mostrarIa(f: Foto): void {
+    if (actual !== f) return;
+    chipIa.classList.toggle("hidden", f.ia !== "buscando");
+  }
+
+  async function reconocer(f: Foto): Promise<void> {
+    if (!URL_RECONOCER) return;
+    f.ia = "buscando";
+    mostrarIa(f);
+    try {
+      const envio = fotoParaClaude(f);
+      const control = new AbortController();
+      const corte = setTimeout(() => control.abort(), 120000);
+      const resp = await fetch(URL_RECONOCER, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(envio),
+        signal: control.signal,
+      }).finally(() => clearTimeout(corte));
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const datos = await resp.json();
+      if (!fotos.includes(f)) return;
+      const id = siguienteSup++;
+      const rgba = new Uint8ClampedArray(f.original.data);
+      const r = await new Promise<any>((fin) => {
+        esperandoSup.set(id, fin);
+        trabajadorSup().postMessage(
+          {
+            id,
+            rgba,
+            ancho: f.original.width,
+            alto: f.original.height,
+            datos,
+            escalaX: f.original.width / envio.ancho,
+            escalaY: f.original.height / envio.alto,
+          },
+          [rgba.buffer],
+        );
+      });
+      if (r.error || !r.lista?.length) throw new Error(r.error ?? "sin superficies");
+      f.superficies = { lista: r.lista, etiquetas: r.etiquetas, ancho: f.original.width, alto: f.original.height };
+      f.ia = "lista";
+      if (actual === f) {
+        ocultarEstado();
+        avisar(activo ? `Listo: ya reconocimos las paredes. Tocá la que querés pintar de ${activo.nombre}.` : "Listo: ya reconocimos las paredes. Elegí un color y tocá una.");
+        actualizarBotones();
+      }
+    } catch (err) {
+      console.warn("probador: Claude no reconoció la foto", err);
+      f.ia = "fallo";
+    }
+    mostrarIa(f);
+  }
+
+  const usable = (f: Foto) => f.lista || !!f.superficies;
 
   // ---------- Disimular desperfectos ----------
   let disimular = false;
@@ -1034,7 +1141,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   async function tocarZona(cx: number, cy: number): Promise<void> {
     const f = actual;
     if (!f) return;
-    if (!f.lista) {
+    if (!usable(f)) {
       avisar("Esperá un momento: todavía estamos preparando la foto.");
       return;
     }
@@ -1046,6 +1153,19 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     const p = puntoDe(cx, cy);
     const op = modo;
     const codigo = activo?.codigo ?? "";
+    const indice = f.superficies ? superficieEn(f.superficies, p.x, p.y) : -1;
+    if (f.superficies && indice >= 0) {
+      const alfa = mascaraSuperficie(f.superficies, indice);
+      if (!dentroDelLimite(f, alfa)) return;
+      const s = f.superficies.lista[indice];
+      const nombre = s.pintable || op === "quitar" ? s.nombre : `${s.nombre} (normalmente no se pinta)`;
+      proponer({ f, op, codigo, alfa: recortarAlLimite(f, alfa), opciones: 2, ancla: { cx, cy }, punto: { x: p.x, y: p.y }, nombre });
+      return;
+    }
+    if (!f.lista) {
+      avisar("Esa parte todavía no la reconocimos. Esperá unos segundos y tocá de nuevo, o usá “Marcar área”.");
+      return;
+    }
     marca.style.left = `${p.px}%`;
     marca.style.top = `${p.py}%`;
     marca.classList.remove("hidden");
@@ -1065,21 +1185,33 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
       actualizarBotones();
       return;
     }
-    if (f.limite) {
-      const lim = f.limite;
-      let adentro = false;
-      for (let k = 0; k < lim.length && !adentro; k += 7) if (lim[k] > 128 && r.alfa[k] > 128) adentro = true;
-      if (!adentro) {
-        avisar("Tocaste fuera del área marcada. Tocá adentro, o “Listo” (arriba en la foto) para pintar en otro lado.");
-        actualizarBotones();
-        return;
-      }
-    }
-    proponer({ f, op, codigo, alfa: recortarAlLimite(f, r.alfa), opciones: r.opciones, ancla: { cx, cy } });
+    if (!dentroDelLimite(f, r.alfa)) return;
+    proponer({ f, op, codigo, alfa: recortarAlLimite(f, r.alfa), opciones: r.opciones, ancla: { cx, cy }, punto: { x: p.x, y: p.y } });
+  }
+
+  function dentroDelLimite(f: Foto, alfa: Uint8Array): boolean {
+    if (!f.limite) return true;
+    const lim = f.limite;
+    for (let k = 0; k < lim.length; k += 7) if (lim[k] > 128 && alfa[k] > 128) return true;
+    avisar("Tocaste fuera del área marcada. Tocá adentro, o “Listo” (arriba en la foto) para pintar en otro lado.");
+    actualizarBotones();
+    return false;
   }
 
   // ---------- Vista previa de la zona antes de pintar ----------
-  let propuesta: { f: Foto; op: Modo; codigo: string; alfa: Uint8Array; opciones: number; lazo?: boolean; ancla?: { cx: number; cy: number }; img?: HTMLCanvasElement } | null = null;
+  let propuesta: {
+    f: Foto;
+    op: Modo;
+    codigo: string;
+    alfa: Uint8Array;
+    opciones: number;
+    lazo?: boolean;
+    ancla?: { cx: number; cy: number };
+    punto?: { x: number; y: number };
+    /** Nombre de la superficie cuando la reconoció Claude. */
+    nombre?: string;
+    img?: HTMLCanvasElement;
+  } | null = null;
 
   function recortarAlLimite(f: Foto, alfa: Uint8Array): Uint8Array {
     if (!f.limite) return alfa;
@@ -1131,7 +1263,8 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     p.img = imagenPropuesta(p);
     dibujarLimite();
     const quitar = p.op === "quitar";
-    textoPropuesta.textContent = p.lazo ? "¿Pintamos toda el área azul?" : quitar ? "¿Quitamos lo rojo?" : "¿Pintamos lo azul?";
+    textoPropuesta.textContent =
+      (p.lazo ? "¿Pintamos toda el área azul?" : quitar ? "¿Quitamos lo rojo?" : "¿Pintamos lo azul?") + (p.nombre ? ` · ${p.nombre}` : "");
     btnPropSi.textContent = p.lazo ? "Pintar toda" : quitar ? "Quitar" : "Pintar";
     btnPropCambiar.classList.toggle("hidden", !!p.lazo);
     btnPropCambiar.disabled = p.opciones < 2;
@@ -1195,12 +1328,21 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     if (!p || ocupado) return;
     ocupado = true;
     btnPropCambiar.disabled = btnPropSi.disabled = true;
+    const desdeClaude = !!p.nombre;
+    if (desdeClaude && (!p.f.lista || !p.punto)) {
+      ocupado = false;
+      proponer({ ...p, img: undefined });
+      avisar("La otra forma de marcar todavía se está preparando. Esperá unos segundos, o usá “Marcar a mano”.");
+      return;
+    }
     textoPropuesta.textContent = "Buscando otra selección…";
-    const r = await pedir({ tipo: "otra", clave: p.f.clave });
+    const r = desdeClaude
+      ? await pedir({ tipo: "zona", clave: p.f.clave, x: p.punto!.x, y: p.punto!.y })
+      : await pedir({ tipo: "otra", clave: p.f.clave });
     ocupado = false;
     if (propuesta !== p) return;
     if (r.tipo === "zona") {
-      proponer({ ...p, alfa: recortarAlLimite(p.f, r.alfa), opciones: r.opciones, img: undefined });
+      proponer({ ...p, alfa: recortarAlLimite(p.f, r.alfa), opciones: r.opciones, nombre: undefined, img: undefined });
     } else {
       proponer({ ...p, img: undefined, opciones: 1 });
       avisar("No hay otra selección. Probá “Marcar a mano”.");
@@ -1266,7 +1408,8 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     btnAlejar.disabled = true;
     btnAcercar.disabled = false;
     aplicarModo();
-    if (f.lista) {
+    mostrarIa(f);
+    if (usable(f)) {
       ocultarEstado();
       avisar(textoModo());
     } else {
@@ -1375,6 +1518,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     pintarColores();
     mostrarFoto(f);
     trabajo.scrollIntoView({ behavior: "smooth", block: "start" });
+    void reconocer(f);
     void analizar(f);
   }
 

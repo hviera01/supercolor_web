@@ -177,3 +177,25 @@ test("disimular desperfectos empareja lo pelado y conserva la sombra", () => {
   assert.ok(Math.abs(Math.log(pelado / pared)) < 0.1, `lo pelado queda como la pared (${pelado} vs ${pared})`);
   assert.ok(sombra < pared * 0.5, "la sombra se mantiene");
 });
+
+test("las superficies de Claude se ajustan al borde real y quedan rectas", async () => {
+  const { limpiarSuperficies, mapaDeSuperficies, superficieEn } = await import("../src/lib/superficies.ts");
+  const w = 300, h = 240;
+  const foto = imagen(w, h, (x, y) => (x >= 100 && x < 200 && y >= 60 && y < 180 ? [225, 205, 180] : [140, 120, 125]));
+  const datos = {
+    superficies: [
+      { nombre: "Pared", tipo: "pared", pintable: true, poligono: [[0, 0], [300, 0], [300, 240], [0, 240]], huecos: [[[106, 66], [194, 55], [205, 186], [95, 174]]] },
+      { nombre: "Recuadro", tipo: "recuadro", pintable: true, poligono: [[106, 66], [194, 55], [205, 186], [95, 174]], huecos: [] },
+    ],
+  };
+  const lista = limpiarSuperficies(datos, 1, 1);
+  const mapa = mapaDeSuperficies(lista, cromaFoto(foto, w, h), w, h);
+  for (const y of [70, 120, 170]) {
+    assert.equal(superficieEn(mapa, 102, y), 1, `el recuadro llega a su borde izquierdo (y=${y})`);
+    assert.equal(superficieEn(mapa, 97, y), 0, `la pared no se mete en el recuadro (y=${y})`);
+    assert.equal(superficieEn(mapa, 197, y), 1, `borde derecho (y=${y})`);
+    assert.equal(superficieEn(mapa, 203, y), 0, `borde derecho, lado pared (y=${y})`);
+  }
+  assert.equal(superficieEn(mapa, 150, 62), 1, "borde de arriba");
+  assert.equal(superficieEn(mapa, 150, 57), 0, "arriba del recuadro es pared");
+});
