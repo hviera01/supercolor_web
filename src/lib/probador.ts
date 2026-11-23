@@ -488,7 +488,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
   }
 
   function fotoParaClaude(f: Foto): { imagen: string; ancho: number; alto: number } {
-    const lado = 1024;
+    const lado = 1280;
     const escala = Math.min(1, lado / Math.max(f.original.width, f.original.height));
     const c = document.createElement("canvas");
     c.width = Math.max(1, Math.round(f.original.width * escala));
