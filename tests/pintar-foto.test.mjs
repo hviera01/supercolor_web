@@ -199,3 +199,19 @@ test("las superficies de Claude se ajustan al borde real y quedan rectas", async
   assert.equal(superficieEn(mapa, 150, 62), 1, "borde de arriba");
   assert.equal(superficieEn(mapa, 150, 57), 0, "arriba del recuadro es pared");
 });
+
+test("las esquinitas sin superficie se rellenan con la pared, pero no el cielo", async () => {
+  const { limpiarSuperficies, mapaDeSuperficies, superficieEn } = await import("../src/lib/superficies.ts");
+  const w = 300, h = 240;
+  const foto = imagen(w, h, (x, y) => (y < 60 ? [120, 170, 230] : [140, 120, 125]));
+  const datos = {
+    superficies: [
+      { nombre: "Pared", tipo: "pared", pintable: true, poligono: [[0, 60], [240, 60], [200, 240], [0, 240]], huecos: [] },
+      { nombre: "Pared lateral", tipo: "pared", pintable: true, poligono: [[252, 60], [300, 60], [300, 240], [212, 240]], huecos: [] },
+    ],
+  };
+  const mapa = mapaDeSuperficies(limpiarSuperficies(datos, 1, 1), cromaFoto(foto, w, h), w, h);
+  assert.notEqual(superficieEn(mapa, 246, 62), -1, "la esquinita entre las dos paredes queda pintada");
+  assert.notEqual(superficieEn(mapa, 226, 150), -1, "la ranura del medio también");
+  assert.equal(superficieEn(mapa, 100, 50), -1, "el cielo no se pinta");
+});

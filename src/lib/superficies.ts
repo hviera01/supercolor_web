@@ -113,7 +113,72 @@ export function mapaDeSuperficies(lista: Superficie[], croma: CromaFoto, ancho: 
       huecos: s.huecos.map((h) => enderezar(h, (x, y) => !dentro(x, y), banda + 2)),
     };
   });
-  return { lista, etiquetas: rasterizar(ajustadas, ancho, alto), ancho, alto };
+  const etiquetas = rasterizar(ajustadas, ancho, alto);
+  rellenarEsquinas(etiquetas, lista, croma, ancho, alto, Math.max(4, Math.round(lado / 60)));
+  return { lista, etiquetas, ancho, alto };
+}
+
+/** Las puntas de los polígonos a veces no se tocan y quedan esquinitas sin
+ * ninguna superficie. Cada pared pintable crece hacia esos huecos (hasta
+ * `alcance` píxeles) solo por donde la foto tiene su mismo tono, así no se
+ * pasa al cielo ni a otra cosa que Claude no listó. */
+function rellenarEsquinas(etiquetas: Int16Array, lista: Superficie[], croma: CromaFoto, ancho: number, alto: number, alcance: number): void {
+  const n = ancho * alto;
+  const canales = [croma.logLuz, croma.cr, croma.cg];
+  const pisos = [0.1, 0.015, 0.015];
+  const cuantas = lista.length;
+  const suma = new Float64Array(cuantas * 3);
+  const suma2 = new Float64Array(cuantas * 3);
+  const cuenta = new Float64Array(cuantas);
+  for (let k = 0; k < n; k++) {
+    const l = etiquetas[k];
+    if (l < 0 || !lista[l].pintable) continue;
+    cuenta[l]++;
+    for (let c = 0; c < 3; c++) {
+      const v = canales[c][k];
+      suma[l * 3 + c] += v;
+      suma2[l * 3 + c] += v * v;
+    }
+  }
+  const media = new Float64Array(cuantas * 3);
+  const desvio = new Float64Array(cuantas * 3);
+  for (let l = 0; l < cuantas; l++) {
+    if (!cuenta[l]) continue;
+    for (let c = 0; c < 3; c++) {
+      const m = suma[l * 3 + c] / cuenta[l];
+      media[l * 3 + c] = m;
+      desvio[l * 3 + c] = Math.max(pisos[c], Math.sqrt(Math.max(0, suma2[l * 3 + c] / cuenta[l] - m * m)));
+    }
+  }
+  const parecido = (k: number, l: number) => {
+    let d = 0;
+    for (let c = 0; c < 3; c++) d += ((canales[c][k] - media[l * 3 + c]) / desvio[l * 3 + c]) ** 2;
+    return d <= 12;
+  };
+  let frente: number[] = [];
+  for (let k = 0; k < n; k++) {
+    const l = etiquetas[k];
+    if (l < 0 || !cuenta[l]) continue;
+    const x = k % ancho;
+    if ((x > 0 && etiquetas[k - 1] < 0) || (x < ancho - 1 && etiquetas[k + 1] < 0) || (k >= ancho && etiquetas[k - ancho] < 0) || (k < n - ancho && etiquetas[k + ancho] < 0)) {
+      frente.push(k);
+    }
+  }
+  for (let paso = 0; paso < alcance && frente.length; paso++) {
+    const siguiente: number[] = [];
+    for (const k of frente) {
+      const l = etiquetas[k];
+      const x = k % ancho;
+      const vecinos = [x > 0 ? k - 1 : -1, x < ancho - 1 ? k + 1 : -1, k - ancho, k + ancho];
+      for (const v of vecinos) {
+        if (v < 0 || v >= n || etiquetas[v] >= 0) continue;
+        if (!parecido(v, l)) continue;
+        etiquetas[v] = l;
+        siguiente.push(v);
+      }
+    }
+    frente = siguiente;
+  }
 }
 
 /** Mueve cada lado del polígono (cada punta por separado, hasta `alcance`

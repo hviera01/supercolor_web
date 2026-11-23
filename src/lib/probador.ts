@@ -1283,6 +1283,7 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
     btnPropSi.disabled = false;
     cajaPropuesta.style.visibility = "hidden";
     cajaPropuesta.classList.remove("hidden");
+    zonaFoto.classList.add("con-propuesta");
     ubicarPropuesta(p);
     cajaPropuesta.style.visibility = "";
     avisar(
@@ -1297,28 +1298,49 @@ export function iniciarProbador(paleta: ColorEnriquecido[], porCodigo: Map<strin
 
   // La tarjeta sale pegada al toque: debajo del dedo, o arriba si no entra,
   // siempre dentro de la foto y a la vista.
+  /** Altura en pantalla (px) del centro de lo marcado. */
+  function centroDeMarca(p: NonNullable<typeof propuesta>): number {
+    const w = p.f.original.width;
+    const h = p.f.original.height;
+    const r = lienzo.getBoundingClientRect();
+    const arriba = Math.max(r.top, 0);
+    const abajo = Math.min(r.bottom, window.innerHeight);
+    let suma = 0;
+    let cuenta = 0;
+    const paso = Math.max(1, Math.round(Math.sqrt((w * h) / 20000)));
+    for (let y = 0; y < h; y += paso) {
+      const ys = r.top + ((y + 0.5) / h) * r.height;
+      if (ys < arriba || ys > abajo) continue;
+      for (let x = 0; x < w; x += paso) {
+        if (p.alfa[y * w + x] > 128) {
+          suma += ys;
+          cuenta++;
+        }
+      }
+    }
+    return cuenta ? suma / cuenta : p.ancla?.cy ?? (arriba + abajo) / 2;
+  }
+
   function ubicarPropuesta(p: NonNullable<typeof propuesta>): void {
+    // La barra va pegada al borde de la foto (arriba o abajo) que queda más
+    // lejos de lo marcado, para no taparlo.
     const caja = zonaFoto.getBoundingClientRect();
-    const ancho = cajaPropuesta.offsetWidth;
     const alto = cajaPropuesta.offsetHeight;
-    const cx = p.ancla?.cx ?? caja.left + caja.width / 2;
-    const cy = p.ancla?.cy ?? caja.top + caja.height / 2;
     const margen = 8;
-    const separacion = 34;
     const visibleArriba = Math.max(caja.top, 0);
     const visibleAbajo = Math.min(caja.bottom, window.innerHeight);
-    let top = cy + separacion;
-    if (top + alto > visibleAbajo - margen) top = cy - separacion - alto;
-    top = Math.max(visibleArriba + margen, Math.min(visibleAbajo - alto - margen, top));
-    const left = Math.max(margen, Math.min(caja.width - ancho - margen, cx - caja.left - ancho / 2));
-    cajaPropuesta.style.left = `${left}px`;
-    cajaPropuesta.style.top = `${top - caja.top}px`;
+    const centro = centroDeMarca(p);
+    const medio = (visibleArriba + visibleAbajo) / 2;
+    const top = centro < medio ? visibleAbajo - alto - margen : visibleArriba + margen;
+    cajaPropuesta.style.left = `${margen}px`;
+    cajaPropuesta.style.top = `${Math.max(visibleArriba + margen, top) - caja.top}px`;
   }
 
   function cerrarPropuesta(): void {
     if (!propuesta) return;
     propuesta = null;
     cajaPropuesta.classList.add("hidden");
+    zonaFoto.classList.remove("con-propuesta");
     dibujarLimite();
     actualizarBotones();
   }
